@@ -5,7 +5,7 @@
 
 namespace
 {
-    Localization::Language currentLanguage = Localization::Language::Russian;
+    Localization::Language currentLanguage = Localization::Language::English;
     const char* LanguageFilePath = "sdmc:/switch/botw-unexplored/language.txt";
 
     char ToStoredValue(Localization::Language language)
@@ -65,9 +65,9 @@ Localization::Language Localization::GetLanguage()
 
 void Localization::ToggleLanguage()
 {
-    if (currentLanguage == Language::Russian) currentLanguage = Language::English;
-    else if (currentLanguage == Language::English) currentLanguage = Language::Spanish;
-    else currentLanguage = Language::Russian;
+    if (currentLanguage == Language::English) currentLanguage = Language::Russian;
+    else if (currentLanguage == Language::Russian) currentLanguage = Language::Spanish;
+    else currentLanguage = Language::English;
     Save();
 }
 
