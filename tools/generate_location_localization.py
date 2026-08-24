@@ -209,7 +209,7 @@ def render_report(matches: Sequence[Match], old: Mapping[int, str]) -> str:
             status = match.status
         lines.append("{}\t{}\t{}\t{}\t{}\t{}".format(
             match.location.hash, match.location.english, old.get(match.location.hash, ""),
-            match.russian or "", status, match.detail))
+            match.russian or "", status, match.detail or "-"))
     return "\n".join(lines) + "\n"
 
 
