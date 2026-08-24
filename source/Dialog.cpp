@@ -34,35 +34,35 @@ Dialog::Dialog(glm::vec2 position, float width, float height, DialogType type)
 
     if (m_Type == DialogType::InvalidSavefile)
     {
-        m_ExitButton = new Button(glm::vec2(buttonX, buttonY), exitButtonWidth, buttonHeight, "Выход");
+        m_ExitButton = new Button(glm::vec2(buttonX, buttonY), exitButtonWidth, buttonHeight, "Exit");
         m_ExitButton->m_Button.m_Color = glm::vec4(197, 77, 77, 0.8f);
 
         float button2Width = 300.0f;
         float button2X = bgRight - sideMargin - button2Width;
-        m_ChooseProfileButton = new Button(glm::vec2(button2X, buttonY), button2Width, buttonHeight, "Выбрать другой профиль");
-        m_Title = "Для этого пользователя не найдены сохранения";
-        m_Description = "Убедитесь, что выбран правильный профиль.";
+        m_ChooseProfileButton = new Button(glm::vec2(button2X, buttonY), button2Width, buttonHeight, "Choose another profile");
+        m_Title = "No save data found for that user";
+        m_Description = "Make sure you chose the correct profile.";
     } else if (m_Type == DialogType::GameIsRunning)
     {
         float centerX = -exitButtonWidth / 2.0f;
-        m_ExitButton = new Button(glm::vec2(centerX, buttonY), exitButtonWidth, buttonHeight, "Выход");
+        m_ExitButton = new Button(glm::vec2(centerX, buttonY), exitButtonWidth, buttonHeight, "Exit");
         m_ExitButton->m_Button.m_Color = glm::vec4(197, 77, 77, 0.8f);
 
         m_SelectedButton = 0;
-        m_Title = "BotW запущена - сохранение недоступно";
-        m_Description = "Запустите приложение хотя бы раз, когда BotW не запущена.";
-        m_Description2 = "После этого им можно будет пользоваться во время игры.";
+        m_Title = "BotW is running - can't load save";
+        m_Description = "Please run this app at least once without BotW running";
+        m_Description2 = "After that you can use it while playing.";
     }
     else if (m_Type == DialogType::MasterModeChoose)
     {
-        m_ExitButton = new Button(glm::vec2(buttonX, buttonY), exitButtonWidth, buttonHeight, "Нет");
+        m_ExitButton = new Button(glm::vec2(buttonX, buttonY), exitButtonWidth, buttonHeight, "No");
         m_ExitButton->m_Button.m_Color = Button::SelectedColor;//glm::vec4(197, 77, 77, 0.8f);
 
         float button2Width = exitButtonWidth;
         float button2X = bgRight - sideMargin - button2Width;
-        m_ChooseProfileButton = new Button(glm::vec2(button2X, buttonY), exitButtonWidth, buttonHeight, "Да");
-        m_Title = "Найдено сохранение режима мастера";
-        m_Description = "Загрузить его?";
+        m_ChooseProfileButton = new Button(glm::vec2(button2X, buttonY), exitButtonWidth, buttonHeight, "Yes");
+        m_Title = "Master mode save file detected";
+        m_Description = "Would you like to load it?";
 
         m_SelectedButton = 1;
     }

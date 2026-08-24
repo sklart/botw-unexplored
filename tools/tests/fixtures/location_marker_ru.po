@@ -1,6 +1,0 @@
-# Artificial fixture; it is not extracted game text.
-msgid "MarkerOne"
-msgstr "Ворота короля"
-
-msgid "MarkerTwo"
-msgstr "\"Название\" в кавычках"

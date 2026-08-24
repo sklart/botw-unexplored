@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Generate the Russian BotW location table from paired LocationMarker PO files."""
+"""Generate the Russian BotW location table from paired Switch message archives."""
 
 from __future__ import annotations
 
 import argparse
 import ast
-import difflib
 import re
+import struct
 import sys
 import unicodedata
 from dataclasses import dataclass
@@ -36,57 +36,118 @@ class Match:
     detail: str = ""
 
 
-def unquote_po(value: str) -> str:
-    """Decode a single PO quoted string using Python's compatible escapes."""
-    value = value.strip()
-    if not value.startswith('"'):
-        raise ValueError("expected a quoted PO string: {!r}".format(value))
-    return ast.literal_eval(value)
+def yaz0_decompress(data: bytes) -> bytes:
+    if data[:4] != b"Yaz0":
+        return data
+    size = struct.unpack_from(">I", data, 4)[0]
+    output = bytearray()
+    source = 16
+    code = bits_left = 0
+    while len(output) < size:
+        if bits_left == 0:
+            code = data[source]
+            source += 1
+            bits_left = 8
+        if code & 0x80:
+            output.append(data[source])
+            source += 1
+        else:
+            first, second = data[source], data[source + 1]
+            source += 2
+            distance = ((first & 0x0F) << 8) | second
+            count = first >> 4
+            if count == 0:
+                count = data[source] + 0x12
+                source += 1
+            else:
+                count += 2
+            start = len(output) - distance - 1
+            for index in range(count):
+                output.append(output[start + index])
+        code <<= 1
+        bits_left -= 1
+    return bytes(output)
 
 
-def parse_po_text(text: str, source: str = "<string>") -> Dict[str, str]:
-    """Read msgid -> msgstr entries from gettext PO text without dependencies."""
-    entries: Dict[str, str] = {}
-    current_id: str | None = None
-    current_value: List[str] = []
-    reading_value = False
-
-    def finish() -> None:
-        nonlocal current_id, current_value, reading_value
-        if current_id:
-            if current_id in entries:
-                raise ValueError("duplicate msgid {!r} in {}".format(current_id, source))
-            entries[current_id] = "".join(current_value)
-        current_id = None
-        current_value = []
-        reading_value = False
-
-    for line_number, raw_line in enumerate(text.splitlines(), 1):
-        line = raw_line.strip()
-        if not line or line.startswith('#'):
-            if not line:
-                finish()
+def sarc_entries(data: bytes):
+    data = yaz0_decompress(data)
+    if data[:4] != b"SARC":
+        raise ValueError("input is not a SARC archive")
+    endian = "<" if data[6:8] == b"\xff\xfe" else ">"
+    header_size = struct.unpack_from(endian + "H", data, 4)[0]
+    data_offset = struct.unpack_from(endian + "I", data, 0x0C)[0]
+    if data[header_size:header_size + 4] != b"SFAT":
+        raise ValueError("missing SFAT header")
+    count = struct.unpack_from(endian + "H", data, header_size + 6)[0]
+    nodes = header_size + 0x0C
+    sfnt = nodes + count * 0x10
+    if data[sfnt:sfnt + 4] != b"SFNT":
+        raise ValueError("missing SFNT header")
+    strings = sfnt + 8
+    for index in range(count):
+        node = nodes + index * 0x10
+        name_data, start, end = struct.unpack_from(endian + "III", data, node + 4)
+        if not name_data >> 24:
             continue
-        if line.startswith("msgid "):
-            finish()
-            current_id = unquote_po(line[6:])
-            continue
-        if line.startswith("msgstr "):
-            if current_id is None:
-                raise ValueError("msgstr without msgid at {}:{}".format(source, line_number))
-            current_value = [unquote_po(line[7:])]
-            reading_value = True
-            continue
-        if line.startswith('"') and reading_value:
-            current_value.append(unquote_po(line))
-            continue
-        raise ValueError("unsupported PO syntax at {}:{}: {}".format(source, line_number, raw_line))
-    finish()
-    return entries
+        name_start = strings + ((name_data & 0x00FFFFFF) * 4)
+        name_end = data.index(b"\0", name_start)
+        name = data[name_start:name_end].decode("utf-8")
+        yield name, data[data_offset + start:data_offset + end]
 
 
-def parse_po(path: Path) -> Dict[str, str]:
-    return parse_po_text(path.read_text(encoding="utf-8"), str(path))
+def parse_msbt(data: bytes) -> Dict[str, str]:
+    if data[:8] != b"MsgStdBn":
+        raise ValueError("input is not an MSBT file")
+    endian = "<" if data[8:10] == b"\xff\xfe" else ">"
+    sections = struct.unpack_from(endian + "H", data, 0x0E)[0]
+    # MSBT has a fixed 0x20-byte header. Every section has an 0x10-byte header.
+    offset = 0x20
+    labels: Dict[int, str] = {}
+    texts: Dict[int, str] = {}
+    for _ in range(sections):
+        magic = data[offset:offset + 4]
+        size = struct.unpack_from(endian + "I", data, offset + 4)[0]
+        payload = offset + 0x10
+        if magic == b"LBL1":
+            groups = struct.unpack_from(endian + "I", data, payload)[0]
+            for group in range(groups):
+                count, relative = struct.unpack_from(endian + "II", data, payload + 4 + group * 8)
+                cursor = payload + relative
+                for _ in range(count):
+                    length = data[cursor]
+                    cursor += 1
+                    label = data[cursor:cursor + length].decode("utf-8")
+                    cursor += length
+                    index = struct.unpack_from(endian + "I", data, cursor)[0]
+                    cursor += 4
+                    if index in labels:
+                        raise ValueError("duplicate MSBT text index {}".format(index))
+                    labels[index] = label
+        elif magic == b"TXT2":
+            count = struct.unpack_from(endian + "I", data, payload)[0]
+            for index in range(count):
+                relative = struct.unpack_from(endian + "I", data, payload + 4 + index * 4)[0]
+                cursor = payload + relative
+                end = cursor
+                while data[end:end + 2] != b"\0\0":
+                    end += 2
+                text = data[cursor:end].decode("utf-16" + ("le" if endian == "<" else "be"))
+                texts[index] = text
+        offset = payload + size
+        offset = (offset + 15) & ~15
+    result = {}
+    for index, label in labels.items():
+        if index not in texts:
+            raise ValueError("MSBT label {!r} has no text".format(label))
+        result[label] = texts[index]
+    return result
+
+
+def parse_switch_location_marker(path: Path) -> Dict[str, str]:
+    for name, contents in sarc_entries(path.read_bytes()):
+        if name == "StaticMsg/LocationMarker.msbt":
+            return parse_msbt(contents)
+    raise ValueError("StaticMsg/LocationMarker.msbt not found in {}".format(path))
 
 
 def parse_locations(path: Path) -> List[Location]:
@@ -175,7 +236,7 @@ def render_table(matches: Sequence[Match]) -> str:
                      for match in generated)
     return """// AUTO-GENERATED FILE.
 // Generated by tools/generate_location_localization.py.
-// Source: botw-gettext LocationMarker.po (USen -> internal message ID -> EUru).
+// Source: Switch Msg_USen/Msg_EUru product.ssarc (USen -> internal message ID -> EUru).
 // Do not edit manually.
 
 #include \"Localization.h\"
@@ -228,8 +289,8 @@ def summary(matches: Sequence[Match]) -> str:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", type=Path, default=Path("source/Data.cpp"))
-    parser.add_argument("--en", type=Path, required=True, help="USen LocationMarker.po")
-    parser.add_argument("--ru", type=Path, required=True, help="EUru LocationMarker.po")
+    parser.add_argument("--en", type=Path, required=True, help="Switch Msg_USen.product.ssarc")
+    parser.add_argument("--ru", type=Path, required=True, help="Switch Msg_EUru.product.ssarc")
     parser.add_argument("--output", type=Path, default=Path("source/LocationLocalization.cpp"))
     parser.add_argument("--report", type=Path, help="write comparison report to this path")
     parser.add_argument("--check", action="store_true", help="verify generated output without writing it")
@@ -237,7 +298,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     locations = parse_locations(args.data)
     old = parse_existing_table(args.output)
-    matches = build_matches(locations, parse_po(args.en), parse_po(args.ru))
+    matches = build_matches(locations, parse_switch_location_marker(args.en), parse_switch_location_marker(args.ru))
     print(summary(matches))
     report = render_report(matches, old)
     if args.report:

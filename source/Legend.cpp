@@ -192,37 +192,37 @@ IconButton::IconButton(ButtonTypes type, glm::vec2 position, float width, float 
     switch (type)
     {
     case Koroks:
-        m_Text = "Короки";
+        m_Text = "Koroks";
         iconPath = "romfs:/korokseed.png";
 
         break;
     case Shrines:
-        m_Text = "Святилища";
+        m_Text = "Shrines";
         iconPath = "romfs:/shrine.png";
 
         break;
     case Hinoxes:
-        m_Text = "Хиноксы";
+        m_Text = "Hinoxes";
         iconPath = "romfs:/hinox.png";
 
         break;
     case Taluses:
-        m_Text = "Каменные талусы";
+        m_Text = "Taluses";
         iconPath = "romfs:/talus.png";
 
         break;
     case Moldugas:
-        m_Text = "Молдоры";
+        m_Text = "Moldugas";
         iconPath = "romfs:/molduga.png";
 
         break;
     case Locations:
-        m_Text = "Локации";
+        m_Text = "Locations";
         iconPath = "romfs:/village.png";
 
         break;
     case ShowCompleted:
-        m_Text = "Показывать найденное";
+        m_Text = "Show Completed";
 
     default:
         break;
