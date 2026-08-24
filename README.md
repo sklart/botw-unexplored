@@ -5,19 +5,29 @@ Easily view what hasn't been discovered in your Breath of the Wild savefile, on 
 
 The korok seeds that haven't been collected and the locations that are left to visit are shown on a map, where it's easy to see koroks or locations you've missed. You can also see shrines, hinoxes, taluses and moldugas too. 
 
-<img src="https://github.com/lud99/botw-unexplored/blob/master/map3_2.0.jpg?raw=true" width=600>
+<img src="https://github.com/sklart/botw-unexplored/blob/master/map3_2.0.jpg?raw=true" width=600>
 
 ## Why?
 There are other websites and tools to display and even edit your BotW savefile, but none of them run on your Switch. You would have to backup your savefile and then transfer it to a computer, which is unnecessarily complicated. That's why I created this homebrew app.
 
 ## Usage
-Download ```botw-unexplored.nro``` from the [releases](https://github.com/lud99/botw-unexplored/releases/download/2.0.0/botw-unexplored.nro), transfer it to your SD card and launch it. Most things should be self explanitory, but here's some information just in case:
+Download `botw-unexplored.nro` from the [latest release](https://github.com/sklart/botw-unexplored/releases/latest), transfer it to your SD card, and launch it.
 
-* Use the analog sticks or the touch screen to move around.  
-* Press X to open the legend and use either the touch screen or the D-pad to navigate the menu (note that the analog sticks won't work here) 
-* Tap a korok to see a guide on how to find it. You can press B to manually mark it as complete. This is useful if you're using the app while playing BotW, as the app won't be able to load your latest savefile in that case. The koroks you've marked as found will be removed once the savefile is able to be loaded it again, so don't worry if you wrongly marked a korok as found.
+* Use the analog sticks or the touch screen to move around.
+* Press X to open the legend. Use the touch screen or the D-pad to navigate it; the analog sticks do not work in this menu.
+* Press ZL while the legend is open to switch between English, Russian, and Spanish. The selected language is saved to `sdmc:/switch/botw-unexplored/language.txt` and restored the next time the app starts.
+* Tap a korok to view a guide. Press B to mark it as complete manually. This is useful while BotW is running, when the app cannot load the newest save. Manual marks are cleared after a save can be loaded again.
+
+## Localization
+
+The interface supports English, Russian, and Spanish. Russian location names are generated from the official Nintendo Switch English and Russian message archives. The generator and its instructions are in [`tools/`](tools/README.md); the extracted game archives are intentionally excluded from Git.
 
 ## Version History
+
+### 1.0.0
+* Added Russian localization, including korok guides and location names.
+* Added English, Russian, and Spanish language switching with persisted selection.
+* Generated all 187 location names from official Nintendo Switch English and Russian localization data.
 
 ### 2.0
 * Added Shrines (+ DLC if it's present), Taluses, Hinoxes and Moldugas.
@@ -35,8 +45,13 @@ Download ```botw-unexplored.nro``` from the [releases](https://github.com/lud99/
 * Initial release
 
 ## Building
-switch-mesa, switch-glad, switch-freetype and switch-glm are required for building the project. Install them with the command ```pacman -S switch-mesa switch-glad switch-glm switch-freetype```  
-Then run ```Make``` to build the .nro file.
+`switch-mesa`, `switch-glad`, `switch-freetype`, and `switch-glm` are required. Install them with:
+
+```
+pacman -S switch-mesa switch-glad switch-glm switch-freetype
+```
+
+Then run `make` to build the `.nro` file.
 
 ### Credits
 Huge thanks to these kind people for making this project possible:
