@@ -2248,10 +2248,12 @@ namespace Data
         Data::Location(2338482506, "Carok Bridge", -1088.0f, -475.0f),
         Data::Location(3616485036, "Horse God Bridge", 590.0f, 3739.0f),
         Data::Location(651882226, "Tarrey Town", 3965.0f, -1615.0f),
-        Data::Location(830978981, "UMiiVillageShopBougu", 3959.0f, -1636.0f),
-        Data::Location(999493164, "UMiiVillageShopJewel", 3951.0f, -1627.0f),
-        Data::Location(3524791528, "UMiiVillageShopYadoya", 4000.0f, -1596.0f),
-        Data::Location(699219316, "UMiiVillageShopYorozu", 3951.0f, -1593.0f),
+        // The four shops are not individual LocationMarker entries in the game.
+        // They are all markers inside Tarrey Town, so use its official English marker text.
+        Data::Location(830978981, "Tarrey Town", 3959.0f, -1636.0f),
+        Data::Location(999493164, "Tarrey Town", 3951.0f, -1627.0f),
+        Data::Location(3524791528, "Tarrey Town", 4000.0f, -1596.0f),
+        Data::Location(699219316, "Tarrey Town", 3951.0f, -1593.0f),
         Data::Location(525058204, "Flight Range", -3852.0f, -2289.0f),
         Data::Location(3218941954, "Great Fairy Fountain", 1976.0f, 846.0f),
         Data::Location(696976382, "Great Fairy Fountain", 4112.0f, -1378.0f),

@@ -1,0 +1,188 @@
+hash	English	old Russian	official Russian	status	detail
+3175296555	Deya Village Ruins	Руины деревни Дейя	Руины деревни Дейя	SAME	
+1277840484	Akkala Span	Мост Аккала	Аккальский мост	CHANGED	duplicate English text has identical Russian translation
+3380786840	Akkala Parade Ground Ruins	Руины парадной площади Аккала	Аккальский плац	CHANGED	
+3471586645	Akkala Citadel Ruins	Руины цитадели Аккала	Аккальская крепость	CHANGED	
+1557062097	Akkala Bridge Ruins	Руины моста Аккала	Крепостной мост	CHANGED	
+3762260647	Akkala Ancient Tech Lab	Лаборатория древних технологий Аккала	Аккальский институт	CHANGED	
+3129975788	Yiga Clan Hideout	Убежище клана Йига	Логово клана Ига	CHANGED	
+2875850637	Big Twin Bridge	Большой мост-близнец	Мост Старшего Брата	CHANGED	
+2233665734	Ancient Tree Stump	Древний пень	Древний дуб	CHANGED	
+408278108	Spring of Courage	Источник мужества	Источник Храбрости	CHANGED	
+2071209971	Warbler's Nest	Гнездо славки	Гнездо Певчих	CHANGED	
+1945958513	Sacred Ground Ruins	Руины священной земли	Священный Сад	CHANGED	
+4105639798	Exchange Ruins	Руины торговой площади	Рынок	CHANGED	
+3644406989	Goponga Village Ruins	Руины деревни Гопонга	Руины деревни Гопонга	SAME	
+2514169964	Eventide Island	Остров Эвентайд	о. Вечерний	CHANGED	
+1654508868	Korok Forest	Лес короков	Лес Короков	CHANGED	
+4144644213	Coliseum Ruins	Руины Колизея	Колизей	CHANGED	
+595217802	Foothill Stable	Предгорная конюшня	Конюшня «У подножия»	CHANGED	
+3125991913	Maw of Death Mountain	Устье Горы Смерти	Путь на Гору Смерти	CHANGED	
+713543009	Luto's Crossing	Переправа Луто	Переправа Ларуто	CHANGED	
+507651319	Dragon Bone Mire	Драконье костяное болото	Драконьи топи	CHANGED	
+3553951309	East Reservoir Lake	Восточное водохранилище	Восточная Чаша	CHANGED	
+1323059506	East Gerudo Ruins	Восточные руины Герудо	Ост-Герудские руины	CHANGED	
+2431624464	East Post Ruins	Руины восточного поста	Восточные дворы	CHANGED	
+2478980063	Castle Town Prison	Тюрьма города-замка	Посадская тюрьма	CHANGED	
+1039025100	Eagus Bridge	Мост Игус	Мост Игус	SAME	
+3657524181	Dueling Peaks Stable	Конюшня Двух вершин	Конюшня «Близнецы»	CHANGED	
+2902872899	Lakeside Stable	Озёрная конюшня	Конюшня «Озерная»	CHANGED	
+873399033	Highland Stable	Высокогорная конюшня	Конюшня «Подгорная»	CHANGED	
+942338926	Faron Woods	Леса Фарона	Фаронские леса	CHANGED	
+2374599353	Goflam's Secret Hot Spring	Тайный горячий источник Гофлама	Гофламовы термы	CHANGED	
+3688908371	Floria Bridge	Мост Флории	Мост Флории	SAME	
+1530736668	Floret Sandbar	Песчаная отмель Флорет	Цветочная отмель	CHANGED	
+1121513915	Woodland Stable	Лесная конюшня	Конюшня «Лесная»	CHANGED	
+809931279	Gatepost Town Ruins	Руины городка у ворот	Привратные дворы	CHANGED	
+3246359944	Pondo's Lodge	Приют Пондо	Дом Пондо	CHANGED	
+3703523822	Tanagar Canyon Course	Каньон Танагара	«Скалогольф»	CHANGED	
+936400081	Gut Check Rock	Скала Испытания желудка	Скала Воли	CHANGED	
+3990952779	Footrace Check-In	Старт забега	«Марафон»	CHANGED	
+333382447	Selmie's Spot	Место Селми	Дом Селми	CHANGED	
+3024400255	Mounted Archery Camp	Лагерь конной стрельбы из лука	«Конный лучник»	CHANGED	
+2961175409	Sand-Seal Rally	Гонка на песчаных тюленях	«Гонки на котиках»	CHANGED	
+2251783038	Shadow Hamlet Ruins	Руины Теневой деревни	Руины Теневой Деревни	CHANGED	
+3352946759	Kolomo Garrison Ruins	Руины гарнизона Коломо	Коморский гарнизон	CHANGED	
+2120926480	Gerudo Town	Город Герудо	Город герудо	CHANGED	
+298455736	Gerudo Canyon Pass	Перевал каньона Герудо	Ущелье Герудо	CHANGED	
+1018195085	Gerudo Desert Gateway	Ворота пустыни Герудо	Пустыня Герудо	CHANGED	
+2221980581	Gerudo Great Skeleton	Большой скелет Герудо	Герудский скелет	CHANGED	
+2226476839	Gerudo Canyon Stable	Конюшня каньона Герудо	Конюшня «Ущелье»	CHANGED	
+3952488165	Goron City	Город горонов	Горонград	CHANGED	
+1798344900	Stolock Bridge	Мост Столок	Горонский мост	CHANGED	
+4043701395	Guchini Plain Barrows	Курганы равнины Гучини	Гучинские курганы	CHANGED	
+1642919384	Owlan Bridge	Мост Оулан	Мост Оулен	CHANGED	
+3105801507	Hateno Village	Деревня Хатено	Хатено	CHANGED	
+1527142182	Fort Hateno	Форт Хатено	Хатенская застава	CHANGED	
+1883933934	Hateno Ancient Tech Lab	Лаборатория древних технологий Хатено	Хатенский институт	CHANGED	
+1000466125	Hebra Great Skeleton	Большой скелет Хебры	Эберский скелет	CHANGED	
+3027059520	Hebra Trailhead Lodge	Приют у тропы Хебры	Дом на Эберском пути	CHANGED	
+2766298647	Great Plateau	Великое Плато	Великое плато	CHANGED	
+1349359286	Bridge of Hylia	Мост Хилии	Мост Хайлии	CHANGED	
+3414442901	Hyrule Castle	Замок Хайрул	Замок Хайрул	SAME	
+1204751586	Hyrule Castle Town Ruins	Руины города-замка Хайрул	Хайрульский посад	CHANGED	
+4118398232	Sanctum	Святилище	Цитадель	CHANGED	
+2189358478	Second Gatehouse	Вторая сторожка	Второй бастион	CHANGED	
+460825652	First Gatehouse	Первая сторожка	Первый бастион	CHANGED	
+4218658653	Observation Room	Смотровая комната	Обзорный зал	CHANGED	
+2356457419	East Passage	Восточный проход	Восточный пассаж	CHANGED	
+4175540406	West Passage	Западный проход	Западный пассаж	CHANGED	
+2414247968	Dining Hall	Столовая	Обеденная зала	CHANGED	
+360578673	Guards' Chamber	Казарма стражи	Зал для тренировок	CHANGED	
+1652215527	Library	Библиотека	Библиотека	SAME	
+2333699026	Lockup	Тюрьма	Темницы	CHANGED	
+303053416	Princess Zelda's Room	Комната принцессы Зельды	Комната Зельды	CHANGED	
+1696008958	Docks	Доки	Причал	CHANGED	
+4121433967	Princess Zelda's Study	Кабинет принцессы Зельды	Кабинет Зельды	CHANGED	
+2192517113	King's Study	Кабинет короля	Кабинет короля	SAME	
+4022625826	Central Square	Центральная площадь	Центральная площадь	SAME	
+819783480	Outskirt Stable	Окраинная конюшня	Конюшня «Окольная»	CHANGED	
+91654966	Hyrule Garrison Ruins	Руины гарнизона Хайрула	Хайрульский гарнизон	CHANGED	
+694762709	Hyrule Kingdom	Королевство Хайрул	Королевство Хайрул	SAME	
+3248177252	Royal Ancient Lab Ruins	Руины королевской древней лаборатории	Королевский институт	CHANGED	
+2533064203	Hyrule Forest Park	Лесной парк Хайрула	Хайрульский парк	CHANGED	
+1548556112	Military Training Camp	Военный тренировочный лагерь	Военный лагерь	CHANGED	
+2534956806	Hyrule Cathedral	Собор Хайрула	Хайрульский собор	CHANGED	
+1985668093	Castle Town Watchtower	Сторожевая башня города-замка	Посадская башня	CHANGED	
+3546501191	Water Reservoir	Водохранилище	Водохранилище	SAME	
+3400678767	Serenne Stable	Конюшня Серенны	Конюшня «Тихая»	CHANGED	
+777469858	Northern Icehouse	Северный ледник	Северный ледник	SAME	
+245561349	Rebonae Bridge	Мост Ребонаэ	Мост Ребона	CHANGED	
+2594385610	Proxim Bridge	Мост Проксим	Ближний мост	CHANGED	
+3635913186	Kakariko Village	Деревня Какарико	Какарико	CHANGED	
+944751526	Sage Temple Ruins	Руины храма мудреца	Храм Мудрецов	CHANGED	
+505908581	Forgotten Temple	Забытый храм	Заброшенный храм	CHANGED	
+3252209964	Sherfin's Secret Hot Spring	Тайный горячий источник Шерфина	Зимровы термы	CHANGED	
+3045954844	Kakariko Bridge	Мост Какарико	Мост Какарико	SAME	
+2497975584	Sturnida Secret Hot Spring	Тайный горячий источник Стурнида	Скворовы термы	CHANGED	
+3414134523	Aquame Bridge	Мост Акваме	Аквамов мост	CHANGED	
+1683320031	Lanayru Road - East Gate	Дорога Ланайру — восточные ворота	Восточные врата Ланейру	CHANGED	
+883911742	Lanayru Road - West Gate	Дорога Ланайру — западные ворота	Западные врата Ланейру	CHANGED	
+3551310717	Jeddo Bridge	Мост Джеддо	Мост Джеддо	SAME	
+1703860556	Thundra Plateau	Плато Тундра	Плато Грома	CHANGED	
+2031910288	Little Twin Bridge	Малый мост-близнец	Мост Младшего Брата	CHANGED	
+2669671949	Lomei Labyrinth Island	Островной лабиринт Ломей	о. Лабиринта	CHANGED	
+1605444492	Lost Woods	Затерянные леса	Затерянные леса	SAME	
+1089820392	Hebra Tower	Башня Хебры	Эберская башня	CHANGED	
+3657172818	Tabantha Tower	Башня Табанты	Табантская башня	CHANGED	
+2935699396	Gerudo Tower	Башня Герудо	Башня Герудо	SAME	
+815768167	Wasteland Tower	Башня Пустоши	Башня Пустыни	CHANGED	
+1201181425	Woodland Tower	Лесная башня	Лесная башня	SAME	
+3734094667	Central Tower	Центральная башня	Центральная башня	SAME	
+2845242333	Great Plateau Tower	Башня Великого плато	Башня Плато	CHANGED	
+959049292	Dueling Peaks Tower	Башня Двух вершин	Башня Близнецов	CHANGED	
+1311694554	Lake Tower	Озёрная башня	Озерная башня	CHANGED	
+787044159	Eldin Tower	Башня Элдина	Элдинская башня	CHANGED	
+1508796329	Akkala Tower	Башня Аккала	Аккальская башня	CHANGED	
+3236378131	Lanayru Tower	Башня Ланайру	Башня Ланейру	CHANGED	
+3084912261	Hateno Tower	Башня Хатено	Хатенская башня	CHANGED	
+696554278	Faron Tower	Башня Фарона	Фаронская башня	CHANGED	
+1585685424	Ridgeland Tower	Башня Риджленда	Башня Увалья	CHANGED	
+2500911877	Malanya Spring	Источник Маланьи	Родник Малании	CHANGED	
+2096616621	Maritta Exchange Ruins	Руины рынка Маритты	Рынок «Тихий»	CHANGED	
+2828811933	Moat Bridge	Мост через ров	Замковый мост	CHANGED	
+870243057	Sokkala Bridge	Мост Соккала	Юго-Аккальский мост II	CHANGED	
+2303590839	East Sokkala Bridge	Восточный мост Соккала	Юго-Аккальский мост III	CHANGED	
+1951872639	West Sokkala Bridge	Западный мост Соккала	Юго-Аккальский мост I	CHANGED	
+4209017368	Abandoned North Mine	Заброшенная северная шахта	Северный рудник	CHANGED	
+2204628981	South Lomei Labyrinth	Южный лабиринт Ломей	Южный лабиринт	CHANGED	
+2033833088	Gleeok Bridge	Мост Глиок	Мост Глиок	SAME	
+1552970068	Wetland Stable	Болотная конюшня	Конюшня «Болотная»	CHANGED	
+262648703	Kara Kara Bazaar	Базар Кара-Кара	Рынок «Кара-Кара»	CHANGED	
+437668261	Bridge of Eldin	Мост Элдина	Мост Элдина	SAME	
+3630550948	Eldin Great Skeleton	Большой скелет Элдина	Элдинский скелет	CHANGED	
+4056592807	Helmhead Bridge	Мост Шлемоголова	Мост Шлемоглава	CHANGED	
+1667293999	Outpost Ruins	Руины заставы	Старое подворье	CHANGED	
+482488324	Spring of Power	Источник силы	Источник Силы	CHANGED	
+418983810	Divine Beast Vah Naboris	Божественный зверь Ва-Наборис	Чудище Ва-Наборис	CHANGED	
+2329276234	Divine Beast Vah Rudania	Божественный зверь Ва-Рудания	Чудище Ва-Рудания	CHANGED	
+1714645139	Divine Beast Vah Ruta	Божественный зверь Ва-Рута	Чудище Ва-Рута	CHANGED	
+4076909179	Divine Beast Vah Medoh	Божественный зверь Ва-Медо	Чудище Ва-Медо	CHANGED	
+3562108796	Oren Bridge	Мост Орен	Мост Орен	SAME	
+2724386324	Rito Village	Деревня рито	Деревня рито	SAME	
+2034441432	Rito Stable	Конюшня рито	Конюшня «Рито»	CHANGED	
+2735931486	Riverside Stable	Речная конюшня	Конюшня «Речная»	CHANGED	
+2399564419	Mabe Village Ruins	Руины деревни Мейб	Руины деревни Мабе	CHANGED	
+2163866886	North Lomei Labyrinth	Северный лабиринт Ломей	Северный лабиринт	CHANGED	
+1906311911	Sarjon Bridge	Мост Сарджон	Мост Сааджон	CHANGED	
+3777956606	Horwell Bridge	Мост Хорвелл	Мост Хоруэлл	CHANGED	
+1316587570	Lanayru Promenade	Набережная Ланайру	Променад Ланейру	CHANGED	
+1472325000	Orsedd Bridge	Мост Орседд	Мост Онеглава	CHANGED	
+1074137441	Rauru Settlement Ruins	Руины поселения Рауру	Руины Рауру	CHANGED	
+2736410794	Statue of the Eighth Heroine	Статуя восьмой героини	Восьмая героиня	CHANGED	
+2330389975	Sanidin Park Ruins	Руины парка Санидин	Санидинский парк	CHANGED	
+1190585220	Manhala Bridge	Мост Манхала	Мост Манхала	SAME	
+3638693926	Arbiter's Grounds	Земли арбитра	Земли Правосудия	CHANGED	
+3639712298	Southern Mine	Южная шахта	Южный рудник	CHANGED	
+3288970722	Shrine of Resurrection	Святилище Возрождения	Святилище Жизни	CHANGED	
+266856107	Ancient Columns	Древние колонны	Древние колонны	SAME	
+2497575260	Inogo Bridge	Мост Иного	Мост Иного	SAME	
+799353726	Tabantha Great Bridge	Большой мост Табанты	Табантский мост	CHANGED	
+1660942948	Tabantha Bridge Stable	Конюшня у моста Табанты	Конюшня «Табантская»	CHANGED	
+2358154241	Gisa Crater	Кратер Гиса	Кратер Гиса	SAME	
+3977462269	Snowfield Stable	Снежная конюшня	Конюшня «Снежная»	CHANGED	
+2569498720	Tabantha Village Ruins	Руины деревни Табанта	Руины деревни Табанта	SAME	
+381273496	South Akkala Stable	Южная конюшня Аккала	Конюшня «Аккала»	CHANGED	
+3826719934	East Akkala Stable	Восточная конюшня Аккала	Конюшня «Ост-Аккала»	CHANGED	
+439135730	Thims Bridge	Мост Тимс	Кузный мост	CHANGED	
+1184224140	Lurelin Village	Деревня Лурелин	Лурелин	CHANGED	
+156403894	Temple of Time	Храм Времени	Храм Времени	SAME	
+1812155232	Boneyard Bridge	Мост Кладбища	Погостный мост	CHANGED	
+2338482506	Carok Bridge	Мост Карок	Мост Карок	SAME	
+3616485036	Horse God Bridge	Мост Лошадиного бога	Мост Бога Лошадей	CHANGED	
+651882226	Tarrey Town	Город Тарри	Новая Деревня	CHANGED	
+830978981	Tarrey Town	Магазин одежды	Новая Деревня	CHANGED	
+999493164	Tarrey Town	Ювелирная лавка	Новая Деревня	CHANGED	
+3524791528	Tarrey Town	Гостиница	Новая Деревня	CHANGED	
+699219316	Tarrey Town	Универсальный магазин	Новая Деревня	CHANGED	
+525058204	Flight Range	Стрельбище	Летная школа	CHANGED	
+3218941954	Great Fairy Fountain	Источник Великой феи	Родник большой феи	CHANGED	
+696976382	Great Fairy Fountain	Источник Великой феи	Родник большой феи	CHANGED	
+1586246504	Great Fairy Fountain	Источник Великой феи	Родник большой феи	CHANGED	
+3236472523	Great Fairy Fountain	Источник Великой феи	Родник большой феи	CHANGED	
+1060984222	Moor Garrison Ruins	Руины гарнизона Мур	Болотный гарнизон	CHANGED	
+4285496036	Zora's Domain	Владения зора	Владения зора	SAME	
+3933111595	Spring of Wisdom	Источник мудрости	Источник Мудрости	CHANGED	
+752285057	Digdogg Suspension Bridge	Подвесной мост Дигдогг	Висячий мост Дигдогг	CHANGED	
+1550993095	Palmorae Ruins	Руины Пальморы	Пальморские руины	CHANGED	
+1246131226	Zonai Ruins	Руины Зонай	Зонайские руины	CHANGED	

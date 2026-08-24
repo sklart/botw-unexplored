@@ -1,0 +1,6 @@
+# Artificial fixture; it is not extracted game text.
+msgid "MarkerOne"
+msgstr "King’s  Gate"
+
+msgid "MarkerTwo"
+msgstr "Quoted \"name\""
