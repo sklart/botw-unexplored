@@ -8,3 +8,4 @@ saves
 script
 __pycache__/
 *.pyc
+localization_sources/
