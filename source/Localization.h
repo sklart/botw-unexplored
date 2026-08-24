@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 namespace Localization
@@ -49,4 +50,5 @@ namespace Localization
     void Load();
     void Save();
     const std::string& GetKorokGuide(int id, const std::string& fallback);
+    const std::string& GetLocationName(uint32_t hash, const std::string& fallback);
 }

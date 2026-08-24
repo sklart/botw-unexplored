@@ -3,6 +3,7 @@
 #include <switch.h>
 
 #include "Map.h"
+#include "Localization.h"
 #include "Graphics/BasicVertices.h"
 #include "SavefileIO.h"
 
@@ -47,7 +48,9 @@ void MapLocation::Render()
     //if (!Map::IsInView(m_Position, margin))
       //  return;
 
-    Map::m_Font.AddTextToBatch(m_LocationData->displayName, m_Position, m_Scale, m_Color, ALIGN_CENTER);
+    Map::m_Font.AddTextToBatch(
+        Localization::GetLocationName(m_LocationData->hash, m_LocationData->displayName),
+        m_Position, m_Scale, m_Color, ALIGN_CENTER);
 }
 
 MapLocation::~MapLocation()
