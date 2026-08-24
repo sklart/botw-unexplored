@@ -6,6 +6,7 @@
 
 #include "Map.h"
 #include "SavefileIO.h"
+#include "Localization.h"
 
 Legend::Legend()
 {
@@ -49,7 +50,7 @@ Legend::Legend()
     m_Show[0] = true;
     m_Buttons[1]->Click(this, true);
     m_Show[1] = true;
-    
+
     // Set first highlighted button
     UpdateSelectedButton();
 }
@@ -61,13 +62,13 @@ void Legend::Update()
     {
         // A new touch
         if (state.count != m_PrevTouchCount)
-        {   
+        {
             m_PrevTouchCount = state.count;
 
             if (state.count == 1)
             {
                 // Convert to more suitable coords
-                glm::vec2 touchPosition = glm::vec2(state.touches[0].x - Map::m_CameraWidth / 2, -(state.touches[0].y - Map::m_CameraHeight / 2)); 
+                glm::vec2 touchPosition = glm::vec2(state.touches[0].x - Map::m_CameraWidth / 2, -(state.touches[0].y - Map::m_CameraHeight / 2));
 
                 for (unsigned int i = 0; i < m_Buttons.size(); i++)
                 {
@@ -86,7 +87,7 @@ void Legend::Update()
 
                             m_HighlightedButton = i;
                             UpdateSelectedButton();
-                            
+
                             break;
                         }
                     }
@@ -96,6 +97,8 @@ void Legend::Update()
     }
 
     u64 buttonsPressed = padGetButtonsDown(Map::m_Pad);
+    if (buttonsPressed & HidNpadButton_ZL)
+        Localization::ToggleLanguage();
     if (buttonsPressed & HidNpadButton_Down)
     {
         if (m_HighlightedButton < (int)m_Buttons.size() - 1)
@@ -143,8 +146,9 @@ void Legend::Render()
 
     float viewLeft = -Map::m_CameraWidth / 2;
     float viewTop = Map::m_CameraHeight / 2;
-    Map::m_Font.AddTextToBatch("Legend", glm::vec2(viewLeft + 25.0f, viewTop - 55.0f), 0.75f, glm::vec3(1.0));
-    Map::m_Font.AddTextToBatch("X to close", glm::vec2(viewLeft + m_Width - 26.0f, viewTop - 55.0f), 0.5f, glm::vec3(1.0), ALIGN_RIGHT);
+    Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::Legend), glm::vec2(viewLeft + 25.0f, viewTop - 55.0f), 0.75f, glm::vec3(1.0));
+    Map::m_Font.AddTextToBatch("ZL - " + Localization::Get(Localization::Text::LanguageName), glm::vec2(viewLeft + m_Width - 26.0f, viewTop - 55.0f), 0.45f, glm::vec3(1.0), ALIGN_RIGHT);
+    Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::Close), glm::vec2(viewLeft + m_Width - 26.0f, viewTop - 82.0f), 0.4f, glm::vec3(1.0), ALIGN_RIGHT);
 
     for (unsigned int i = 0; i < m_Buttons.size(); i++)
     {
@@ -188,38 +192,38 @@ IconButton::IconButton(ButtonTypes type, glm::vec2 position, float width, float 
     switch (type)
     {
     case Koroks:
-        m_Text = "Koroks";
+        m_Text = "Короки";
         iconPath = "romfs:/korokseed.png";
 
         break;
     case Shrines:
-        m_Text = "Shrines";
+        m_Text = "Святилища";
         iconPath = "romfs:/shrine.png";
 
         break;
     case Hinoxes:
-        m_Text = "Hinoxes";
+        m_Text = "Хиноксы";
         iconPath = "romfs:/hinox.png";
 
         break;
     case Taluses:
-        m_Text = "Taluses";
+        m_Text = "Каменные талусы";
         iconPath = "romfs:/talus.png";
 
-        break; 
+        break;
     case Moldugas:
-        m_Text = "Moldugas";
+        m_Text = "Молдоры";
         iconPath = "romfs:/molduga.png";
 
         break;
     case Locations:
-        m_Text = "Locations";
+        m_Text = "Локации";
         iconPath = "romfs:/village.png";
 
         break;
     case ShowCompleted:
-        m_Text = "Show Completed";
-    
+        m_Text = "Показывать найденное";
+
     default:
         break;
     }
@@ -260,13 +264,13 @@ void IconButton::Render()
 
     float mainTextMargin = 35.0f;
     glm::vec2 mainTextPosition(
-        m_Icon.m_Position.x + mainTextMargin, 
+        m_Icon.m_Position.x + mainTextMargin,
         m_Icon.m_Position.y - m_Height / 8.0f
     );
 
     float countTextMargin = 20.0f;
     glm::vec2 countTextPosition(
-        m_Position.x + m_Width - countTextMargin, 
+        m_Position.x + m_Width - countTextMargin,
         mainTextPosition.y
     );
 
@@ -280,7 +284,7 @@ void IconButton::Render()
         if (!SavefileIO::HasDLC)
             countString = std::to_string(SavefileIO::foundShrines.size()) + "/" + std::to_string(Data::ShrineCount);
         else
-            countString = std::to_string(SavefileIO::foundShrines.size() + SavefileIO::foundDLCShrines.size()) + "/" + 
+            countString = std::to_string(SavefileIO::foundShrines.size() + SavefileIO::foundDLCShrines.size()) + "/" +
                           std::to_string(Data::ShrineCount + Data::DLCShrineCount);
         break;
     case Hinoxes:
@@ -300,8 +304,8 @@ void IconButton::Render()
         break;
     }
 
-    Map::m_Font.AddTextToBatch(m_Text, mainTextPosition, 0.5f, glm::vec3(1.0));
-    Map::m_Font.AddTextToBatch(countString, countTextPosition, 0.5f, glm::vec3(1.0), ALIGN_RIGHT);
+    Map::m_Font.AddTextToBatch(Localization::Get(static_cast<Localization::Text>(static_cast<int>(Localization::Text::Koroks) + static_cast<int>(m_Type))), mainTextPosition, 0.40f, glm::vec3(1.0), ALIGN_LEFT, 150.0f);
+    Map::m_Font.AddTextToBatch(countString, countTextPosition, 0.42f, glm::vec3(1.0), ALIGN_RIGHT);
 }
 
 bool IconButton::Click(Legend* legend)
@@ -334,7 +338,7 @@ bool IconButton::Click(Legend* legend, bool toggled)
 
 IconButton::~IconButton()
 {
-    
+
 }
 
 constexpr glm::vec4 IconButton::HighlightedColor;

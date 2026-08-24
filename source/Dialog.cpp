@@ -6,6 +6,7 @@
 
 #include "Map.h"
 #include "Legend.h"
+#include "Localization.h"
 #include "SavefileIO.h"
 
 Dialog::Dialog(glm::vec2 position, float width, float height, DialogType type)
@@ -33,42 +34,67 @@ Dialog::Dialog(glm::vec2 position, float width, float height, DialogType type)
 
     if (m_Type == DialogType::InvalidSavefile)
     {
-        m_ExitButton = new Button(glm::vec2(buttonX, buttonY), exitButtonWidth, buttonHeight, "Exit");
+        m_ExitButton = new Button(glm::vec2(buttonX, buttonY), exitButtonWidth, buttonHeight, "Выход");
         m_ExitButton->m_Button.m_Color = glm::vec4(197, 77, 77, 0.8f);
 
         float button2Width = 300.0f;
         float button2X = bgRight - sideMargin - button2Width;
-        m_ChooseProfileButton = new Button(glm::vec2(button2X, buttonY), button2Width, buttonHeight, "Choose another profile");
-        m_Title = "No save data found for that user";
-        m_Description = "Make sure you chose the correct profile.";
+        m_ChooseProfileButton = new Button(glm::vec2(button2X, buttonY), button2Width, buttonHeight, "Выбрать другой профиль");
+        m_Title = "Для этого пользователя не найдены сохранения";
+        m_Description = "Убедитесь, что выбран правильный профиль.";
     } else if (m_Type == DialogType::GameIsRunning)
     {
         float centerX = -exitButtonWidth / 2.0f;
-        m_ExitButton = new Button(glm::vec2(centerX, buttonY), exitButtonWidth, buttonHeight, "Exit");
+        m_ExitButton = new Button(glm::vec2(centerX, buttonY), exitButtonWidth, buttonHeight, "Выход");
         m_ExitButton->m_Button.m_Color = glm::vec4(197, 77, 77, 0.8f);
 
         m_SelectedButton = 0;
-        m_Title = "BotW is running, can't load save";
-        m_Description = "Please run this app at least once without BotW running";
-        m_Description2 = "After that you can use it while playing.";
+        m_Title = "BotW запущена - сохранение недоступно";
+        m_Description = "Запустите приложение хотя бы раз, когда BotW не запущена.";
+        m_Description2 = "После этого им можно будет пользоваться во время игры.";
     }
     else if (m_Type == DialogType::MasterModeChoose)
     {
-        m_ExitButton = new Button(glm::vec2(buttonX, buttonY), exitButtonWidth, buttonHeight, "No");
+        m_ExitButton = new Button(glm::vec2(buttonX, buttonY), exitButtonWidth, buttonHeight, "Нет");
         m_ExitButton->m_Button.m_Color = Button::SelectedColor;//glm::vec4(197, 77, 77, 0.8f);
 
         float button2Width = exitButtonWidth;
         float button2X = bgRight - sideMargin - button2Width;
-        m_ChooseProfileButton = new Button(glm::vec2(button2X, buttonY), exitButtonWidth, buttonHeight, "Yes");
-        m_Title = "Master mode save file detected";
-        m_Description = "Would you like to load it?";
+        m_ChooseProfileButton = new Button(glm::vec2(button2X, buttonY), exitButtonWidth, buttonHeight, "Да");
+        m_Title = "Найдено сохранение режима мастера";
+        m_Description = "Загрузить его?";
 
         m_SelectedButton = 1;
     }
 
+    UpdateTexts();
     UpdateSelectedButton();
 }
 
+void Dialog::UpdateTexts()
+{
+    if (m_Type == DialogType::InvalidSavefile)
+    {
+        m_ExitButton->m_Text = Localization::Get(Localization::Text::Exit);
+        m_ChooseProfileButton->m_Text = Localization::Get(Localization::Text::ChooseAnotherProfile);
+        m_Title = Localization::Get(Localization::Text::NoSaveDataTitle);
+        m_Description = Localization::Get(Localization::Text::NoSaveDataDescription);
+    }
+    else if (m_Type == DialogType::GameIsRunning)
+    {
+        m_ExitButton->m_Text = Localization::Get(Localization::Text::Exit);
+        m_Title = Localization::Get(Localization::Text::GameRunningTitle);
+        m_Description = Localization::Get(Localization::Text::GameRunningDescription);
+        m_Description2 = Localization::Get(Localization::Text::GameRunningDescription2);
+    }
+    else if (m_Type == DialogType::MasterModeChoose)
+    {
+        m_ExitButton->m_Text = Localization::Get(Localization::Text::No);
+        m_ChooseProfileButton->m_Text = Localization::Get(Localization::Text::Yes);
+        m_Title = Localization::Get(Localization::Text::MasterModeTitle);
+        m_Description = Localization::Get(Localization::Text::MasterModeDescription);
+    }
+}
 bool Dialog::IsPositionOn(glm::vec2 position)
 {
     if (position.x > m_Position.x - m_Width / 2.0f && position.x < m_Position.x + m_Width / 2.0f)
@@ -101,7 +127,7 @@ void Dialog::Update()
     {
         // A new touch
         if (state.count != m_PrevTouchCount)
-        {   
+        {
             m_PrevTouchCount = state.count;
 
             if (state.count == 1)
@@ -113,9 +139,9 @@ void Dialog::Update()
                     m_ExitButton->Click();
                     m_SelectedButton = 0;
 
-                    if (m_Type != DialogType::MasterModeChoose) 
+                    if (m_Type != DialogType::MasterModeChoose)
                         Map::m_ShouldExit = true;
-                    else if (m_Type == DialogType::MasterModeChoose) 
+                    else if (m_Type == DialogType::MasterModeChoose)
                     {
                         m_IsOpen = false;
                         Map::m_Legend->m_IsOpen = true;
@@ -125,20 +151,21 @@ void Dialog::Update()
                     m_ChooseProfileButton->Click();
                     m_SelectedButton = 1;
 
-                    if (m_Type == DialogType::InvalidSavefile) 
+                    if (m_Type == DialogType::InvalidSavefile)
                     {
                         SavefileIO::LoadGamesave(false, true);
                         Map::UpdateMapObjects();
-                    } 
+                    }
                     // else if (m_Type == DialogType::MasterModeChoose)
                     //     Map::m_ShouldLoadMastermodeFile = true;
                 }
-                    
-                UpdateSelectedButton();
+
+                UpdateTexts();
+    UpdateSelectedButton();
             }
         }
     }
-    
+
     u64 buttonsPressed = padGetButtonsDown(Map::m_Pad);
     if (buttonsPressed & HidNpadButton_Left)
     {
@@ -147,7 +174,8 @@ void Dialog::Update()
             if (m_SelectedButton == 1)
                 m_SelectedButton = 0;
 
-            UpdateSelectedButton();
+            UpdateTexts();
+    UpdateSelectedButton();
         }
     }
     if (buttonsPressed & HidNpadButton_Right)
@@ -157,7 +185,8 @@ void Dialog::Update()
             if (m_SelectedButton == 0)
                 m_SelectedButton = 1;
 
-            UpdateSelectedButton();
+            UpdateTexts();
+    UpdateSelectedButton();
         }
     }
     if (buttonsPressed & HidNpadButton_A)
@@ -165,22 +194,22 @@ void Dialog::Update()
         // Exit button
         if (m_SelectedButton == 0)
         {
-            if (m_Type != DialogType::MasterModeChoose) 
+            if (m_Type != DialogType::MasterModeChoose)
                 Map::m_ShouldExit = true;
             else if (m_Type == DialogType::MasterModeChoose)
             {
                 m_IsOpen = false;
                 Map::m_Legend->m_IsOpen = true;
             }
-                
-        } 
+
+        }
         else if (m_SelectedButton == 1) {
             if (m_Type == DialogType::InvalidSavefile)
             {
                 SavefileIO::LoadGamesave(false, true);
                 Map::UpdateMapObjects();
-            } 
-                
+            }
+
             // else if (m_Type == DialogType::MasterModeChoose)
             //     Map::m_ShouldLoadMastermodeFile = true;
         }
@@ -189,6 +218,7 @@ void Dialog::Update()
 
 void Dialog::Render()
 {
+    UpdateTexts();
     m_Background.Render();
 
     glm::mat4 emptyViewMatrix(1.0f);
@@ -199,7 +229,7 @@ void Dialog::Render()
 
     glm::vec2 titleSize = Map::m_Font.RenderText(m_Title, glm::vec2(0.0f, top - titleTopMargin), 0.75f, glm::vec3(1.0f), ALIGN_CENTER);
 
-    float descTop = top - titleTopMargin - titleSize.y - 10.0f; 
+    float descTop = top - titleTopMargin - titleSize.y - 10.0f;
 
     Map::m_Font.RenderText(m_Description, glm::vec2(0.0f, descTop - 30.0f), 0.5f, glm::vec3(1.0f), ALIGN_CENTER);
     Map::m_Font.RenderText(m_Description2, glm::vec2(0.0f, descTop - 70.0f), 0.5f, glm::vec3(1.0f), ALIGN_CENTER);

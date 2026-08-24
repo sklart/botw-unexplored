@@ -55,6 +55,7 @@ public:
 
     bool IsPositionOn(glm::vec2 position);
     void UpdateSelectedButton();
+    void UpdateTexts();
 
     void Update();
     void Render();

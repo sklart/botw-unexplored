@@ -4,6 +4,7 @@
 #include "Map.h"
 #include "SavefileIO.h"
 #include "Log.h"
+#include "Localization.h"
 
 KorokDialog::KorokDialog()
 {
@@ -18,8 +19,8 @@ KorokDialog::KorokDialog()
 
 void KorokDialog::Render(glm::mat4 projMat, glm::mat4 viewMat)
 {
-    if (!m_IsOpen) 
-        return; 
+    if (!m_IsOpen)
+        return;
 
     m_Background.m_ProjectionMatrix = &projMat;
     m_Background.m_ViewMatrix = nullptr;
@@ -35,7 +36,7 @@ void KorokDialog::Render(glm::mat4 projMat, glm::mat4 viewMat)
     }
 
     // Place the text just below the image
-    float textY = 0.0f; 
+    float textY = 0.0f;
     if (m_Image)
         textY = m_Image->m_Position.y - (m_Image->m_Texture->m_Height * m_Image->m_Scale / 2.0f) - 50.0f;
     else
@@ -44,9 +45,11 @@ void KorokDialog::Render(glm::mat4 projMat, glm::mat4 viewMat)
     // Render text
     glm::vec2 startPos(Map::m_ScreenLeft + m_Margin, textY);
 
-    Map::m_Font.AddTextToBatch(m_Text, startPos, 0.5f, glm::vec3(1.0f), ALIGN_LEFT, Width - m_Margin * 2);
-    Map::m_Font.AddTextToBatch("X to close", glm::vec2(Map::m_ScreenLeft + Width - 20.0f, Map::m_ScreenTop - 35.0f), 0.45f, glm::vec3(1.0f), ALIGN_RIGHT);
-    Map::m_Font.AddTextToBatch("B to mark as found", glm::vec2(Map::m_ScreenLeft + 15, Map::m_ScreenTop - 35.0f), 0.45f, glm::vec3(1.0f), ALIGN_LEFT);
+    Map::m_Font.AddTextToBatch(m_Text, startPos, 0.46f, glm::vec3(1.0f), ALIGN_LEFT, Width - m_Margin * 2);
+
+    // Russian action labels are rendered on separate lines to prevent overlap.
+    Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::MarkFound), glm::vec2(Map::m_ScreenLeft + 15, Map::m_ScreenTop - 32.0f), 0.34f, glm::vec3(1.0f), ALIGN_LEFT);
+    Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::Close), glm::vec2(Map::m_ScreenLeft + Width - 20.0f, Map::m_ScreenTop - 62.0f), 0.34f, glm::vec3(1.0f), ALIGN_RIGHT);
 }
 
 void KorokDialog::SetOpen(bool open)
@@ -56,7 +59,7 @@ void KorokDialog::SetOpen(bool open)
 
 void KorokDialog::SetSeed(int seed, int korokIndex)
 {
-    m_Text = Data::KorokInfos.at(seed).text;
+    m_Text = Localization::GetKorokGuide(seed, Data::KorokInfos.at(seed).text);
     m_KorokIndex = korokIndex;
 
     // Set image
@@ -84,7 +87,7 @@ void KorokDialog::SetSeed(int seed, int korokIndex)
     if (path == "")
         return;
 
-    m_Image = new TexturedQuad(); 
+    m_Image = new TexturedQuad();
     m_Image->Create(path);
     m_Image->m_Scale = 1.25f;
 
@@ -106,5 +109,5 @@ glm::vec2 KorokDialog::GetPosition()
 
 KorokDialog::~KorokDialog()
 {
-    
+
 }

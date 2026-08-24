@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <map>
 #include <glm/vec2.hpp>
@@ -13,10 +14,10 @@
 
 struct Text
 {
-    Text(unsigned char ch, glm::vec2 p, float s, glm::vec3 c, int a) :
+    Text(uint32_t ch, glm::vec2 p, float s, glm::vec3 c, int a) :
     character(ch), position(p), scale(s), color(c), align(a) {};
 
-    unsigned char character;
+    uint32_t character;
     glm::vec2 position = glm::vec2(0.0f, 0.0f);
     float scale = 1.0f;
     glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -35,14 +36,14 @@ public:
     Shader m_Shader;
     Mesh<TextureVertex> m_Mesh;
     Mesh<TextureVertex> m_CharMesh;
-    
-    std::map<char, Character> m_Characters;
+
+    std::map<uint32_t, Character> m_Characters;
     glm::mat4* m_ProjectionMatrix;
     glm::mat4* m_ViewMatrix;
 
     bool m_Initialized = false;
 
-    std::map<char, std::vector<Text>> m_CharsToRender;
+    std::map<uint32_t, std::vector<Text>> m_CharsToRender;
 
 private:
     unsigned int m_Vao;
@@ -58,6 +59,6 @@ public:
     void RenderBatch();
 
     glm::vec2 RenderText(const std::string& text, glm::vec2 position, float scale, glm::vec3 color, int align = ALIGN_LEFT);
-    
+
     ~Font();
 };
