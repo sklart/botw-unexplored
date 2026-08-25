@@ -95,19 +95,23 @@ void cleanUp()
 int main()
 {
     LogInit();
+    Log("START: main");
 
     // To be able to run memory cleanup when the app closes
     if (R_FAILED(appletLockExit()))
         Log("appletLockExit() failed");
+    Log("START: applet lock complete");
 
     // Setup NXLink
     socketInitializeDefault();
     s_nxlinkSock = nxlinkStdio();
     nxLinkInitialized = true;
+    Log("START: network complete");
 
     // Init romfs
     if (R_FAILED(romfsInit()))
         Log("romfsInit() failed");
+    Log("START: RomFS complete");
 
     // Configure our supported input layout: a single player with standard controller styles
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
@@ -120,9 +124,11 @@ int main()
         Log("OpenGL Failed to initialize");
         return 0;
     }
+    Log("START: EGL complete");
 
     // Load OpenGL routines using glad
     gladLoadGL();
+    Log("START: GL loader complete");
 
     // OpenGL config
     glEnable(GL_BLEND);
@@ -132,7 +138,18 @@ int main()
     PadState pad;
     padInitializeDefault(&pad);
 
-    Map::Init();
+    if (!Map::Init())
+    {
+        Log("START: map initialization failed");
+        romfsExit();
+        deinitEgl();
+        if (s_nxlinkSock >= 0)
+            deinitNxLink();
+        else
+            socketExit();
+        appletUnlockExit();
+        return EXIT_FAILURE;
+    }
     Map::m_Pad = &pad;
 
     // Load settings if they exist

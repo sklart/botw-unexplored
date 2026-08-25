@@ -3,7 +3,11 @@
 #include <cstdint>
 #include <string>
 #include <map>
+#include <vector>
 #include <glm/vec2.hpp>
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 #include "Shader.h"
 #include "Mesh.hpp"
@@ -48,6 +52,11 @@ public:
 private:
     unsigned int m_Vao;
     unsigned int m_Vbo;
+    FT_Library m_FreeType = nullptr;
+    FT_Face m_Face = nullptr;
+
+    bool LoadGlyph(uint32_t character);
+    const Character& GetCharacter(uint32_t character);
 
 public:
     int Load(const std::string& filepath);

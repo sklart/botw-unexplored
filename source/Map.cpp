@@ -18,8 +18,9 @@
 
 constexpr float MapScale = 0.25f;
 
-void Map::Init()
+bool Map::Init()
 {
+    Log("MAP: initialization begin");
     Localization::Load();
     Data::LoadPaths();
 
@@ -31,7 +32,11 @@ void Map::Init()
     m_MapBackground.m_ViewMatrix = &m_ViewMatrix;
 
     // Load font
-    m_Font.Load("romfs:/arial.ttf");
+    if (m_Font.Load("romfs:/arial.ttf") != 1)
+    {
+        Log("MAP: font initialization failed");
+        return false;
+    }
     m_Font.m_ProjectionMatrix = &m_ProjectionMatrix;
     m_Font.m_ViewMatrix = &m_ViewMatrix;
 
@@ -77,6 +82,8 @@ void Map::Init()
     m_Locations = new MapLocation[Data::LocationsCount];
 
     UpdateMapObjects();
+    Log("MAP: initialization complete");
+    return true;
 }
 
 void Map::UpdateMapObjects()

@@ -23,7 +23,7 @@ class KorokDialog;
 
 namespace Map
 {
-    void Init();
+    bool Init();
 
     void UpdateMapObjects();
 
