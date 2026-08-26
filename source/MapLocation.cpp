@@ -1,5 +1,6 @@
 #include "MapLocation.h"
 
+#include <algorithm>
 #include <switch.h>
 
 #include "Map.h"
@@ -38,19 +39,45 @@ void MapLocation::Render()
 {
     if (m_Found && !m_ShowAnyway) return;
 
-    // Text culling
+    // The overview is too dense for readable labels. They become available while zooming in.
+    if (Map::m_Zoom < 0.55f) return;
 
-    // Because the text width is unknow before rendering, some margin is used to guess the width of the text
-    float margin = 100.0f;
-    margin += margin * m_Scale;
+    const std::string label = Localization::GetLocationName(m_LocationData->hash, m_LocationData->displayName);
+    const size_t characterCount = std::max<size_t>(1, std::count_if(label.begin(), label.end(), [](unsigned char c)
+    {
+        return (c & 0xC0) != 0x80;
+    }));
 
-    // Don't render the text if it isn't in view
-    //if (!Map::IsInView(m_Position, margin))
-      //  return;
+    // Keep long translated names within a predictable on-screen width.
+    constexpr float MaxLabelWidthOnScreen = 190.0f;
+    constexpr float EstimatedGlyphWidth = 30.0f;
+    float textScale = m_Scale;
+    const float estimatedWidth = characterCount * EstimatedGlyphWidth * textScale * Map::m_Zoom;
+    if (estimatedWidth > MaxLabelWidthOnScreen)
+        textScale *= MaxLabelWidthOnScreen / estimatedWidth;
 
-    Map::m_Font.AddTextToBatch(
-        Localization::GetLocationName(m_LocationData->hash, m_LocationData->displayName),
-        m_Position, m_Scale, m_Color, ALIGN_CENTER);
+    const float halfWidth = std::min(MaxLabelWidthOnScreen * 0.5f, characterCount * EstimatedGlyphWidth * textScale * Map::m_Zoom * 0.5f);
+    constexpr float HalfHeight = 18.0f;
+    const glm::vec2 screenPosition = (m_Position - Map::m_CameraPosition) * Map::m_Zoom;
+    const glm::vec4 bounds(screenPosition.x - halfWidth, screenPosition.y - HalfHeight,
+                           screenPosition.x + halfWidth, screenPosition.y + HalfHeight);
+
+    if (!Map::IsInView(m_Position, halfWidth / Map::m_Zoom)) return;
+
+    for (const glm::vec4& other : m_LabelBounds)
+    {
+        const bool overlaps = bounds.x < other.z && bounds.z > other.x &&
+                              bounds.y < other.w && bounds.w > other.y;
+        if (overlaps) return;
+    }
+    m_LabelBounds.push_back(bounds);
+
+    Map::m_Font.AddTextToBatch(label, m_Position, textScale, m_Color, ALIGN_CENTER);
+}
+
+void MapLocation::BeginLabelPass()
+{
+    m_LabelBounds.clear();
 }
 
 MapLocation::~MapLocation()
@@ -59,3 +86,4 @@ MapLocation::~MapLocation()
 }
 
 bool MapLocation::m_ShowAnyway = false;
+std::vector<glm::vec4> MapLocation::m_LabelBounds;

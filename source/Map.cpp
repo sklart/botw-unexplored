@@ -440,6 +440,7 @@ void Map::Render()
            MapObject<Data::Molduga>::Render();
         if (m_Legend->m_Show[IconButton::ButtonTypes::Locations])
         {
+            MapLocation::BeginLabelPass();
             for (int i = 0; i < Data::LocationsCount; i++)
                 m_Locations[i].Render();
         }
