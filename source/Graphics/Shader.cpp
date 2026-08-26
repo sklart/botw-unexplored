@@ -82,9 +82,11 @@ void Shader::SetUniform(const std::string& name, int value)
 
 void Shader::Delete()
 {
-    glDeleteProgram(m_id);
-
-    m_id = 0;
+    if (m_id != 0)
+    {
+        glDeleteProgram(m_id);
+        m_id = 0;
+    }
 }
 
 Shader::~Shader()

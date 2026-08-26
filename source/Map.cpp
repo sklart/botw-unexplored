@@ -517,6 +517,7 @@ void Map::Destory()
 {
     delete[] m_Koroks;
     delete[] m_Shrines;
+    delete[] m_DLCShrines;
     delete[] m_Hinoxes;
     delete[] m_Taluses;
     delete[] m_Moldugas;
@@ -527,6 +528,12 @@ void Map::Destory()
     delete m_GameRunningDialog;
     delete m_MasterModeDialog;
     delete m_KorokDialog;
+    delete m_LineRenderer;
+    m_LineRenderer = nullptr;
+
+    m_Font.Destroy();
+    m_MapBackground.Destroy();
+    m_MasterModeIcon.Destroy();
 }
 
 TexturedQuad Map::m_MapBackground;

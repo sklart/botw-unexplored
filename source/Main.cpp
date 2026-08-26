@@ -79,13 +79,18 @@ void cleanUp()
             Log("koroks.txt successfully deleted to avoid desync");
     }
 
+    Log("SHUTDOWN: map cleanup begin");
     Map::Destory();
+    Log("SHUTDOWN: map cleanup complete");
 
     // Cleanup
+    Log("SHUTDOWN: romfs cleanup begin");
     romfsExit();
+    Log("SHUTDOWN: EGL cleanup begin");
 
     // Deinitialize EGL
     deinitEgl();
+    Log("SHUTDOWN: EGL cleanup complete");
 
     // Deinitialize network
     deinitNxLink();

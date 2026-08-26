@@ -195,6 +195,8 @@ bool MapObject<T>::IsClicked(glm::vec2 position)
 template <typename T>
 MapObject<T>::~MapObject()
 {
+    m_Mesh.Destroy();
+
     // Delete the texture (only once)
     if (m_Texture) {
         delete m_Texture;

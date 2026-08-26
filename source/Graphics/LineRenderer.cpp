@@ -105,5 +105,6 @@ void LineRenderer::RenderLines(glm::mat4 projMat, glm::mat4 viewMat)
 
 LineRenderer::~LineRenderer()
 {
+    m_Mesh.Destroy();
     m_Shader.Delete();
 }

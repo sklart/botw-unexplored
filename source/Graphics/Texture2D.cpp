@@ -17,6 +17,7 @@ Texture2D::Texture2D(const std::string& filepath)
 
 void Texture2D::Load(const std::string& filepath)
 {
+	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &m_Texture);
 	glBindTexture(GL_TEXTURE_2D, m_Texture);
 
@@ -66,5 +67,9 @@ void Texture2D::Unbind()
 
 Texture2D::~Texture2D()
 {
-    glDeleteTextures(1, &m_Texture);
+    if (m_Texture != 0)
+    {
+        glDeleteTextures(1, &m_Texture);
+        m_Texture = 0;
+    }
 }

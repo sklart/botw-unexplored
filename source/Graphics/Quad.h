@@ -20,6 +20,8 @@ public:
 
     void Render();
 
+    void Destroy();
+
     ~Quad();
 
 public:
@@ -45,6 +47,8 @@ public:
     void Create(const std::string& texturePath, glm::vec2 bottomLeft, glm::vec2 bottomRight, glm::vec2 topRight, glm::vec2 topLeft);
 
     void Render();
+
+    void Destroy();
 
     ~TexturedQuad();
 

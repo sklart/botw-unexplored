@@ -100,9 +100,15 @@ void Quad::Render()
     m_Shader.Unbind();
 }
 
+void Quad::Destroy()
+{
+    m_Mesh.Destroy();
+    m_Shader.Delete();
+}
+
 Quad::~Quad()
 {
-    m_Shader.Delete();
+    Destroy();
 }
 
 Shader Quad::m_Shader;
@@ -196,6 +202,7 @@ void TexturedQuad::Create(const std::string& texturePath, glm::vec2 bottomLeft, 
 void TexturedQuad::Render()
 {
     m_Shader.Bind();
+    m_Shader.SetUniform("tex", 0);
 
     glm::mat4 emptyMat(1.0f);
 
@@ -218,12 +225,20 @@ void TexturedQuad::Render()
     m_Shader.Unbind();
 }
 
+void TexturedQuad::Destroy()
+{
+    m_Mesh.Destroy();
+    m_Shader.Delete();
+    if (m_Texture)
+    {
+        delete m_Texture;
+        m_Texture = nullptr;
+    }
+}
+
 TexturedQuad::~TexturedQuad()
 {
-    m_Shader.Delete();
-    
-    if (m_Texture)
-        delete m_Texture;
+    Destroy();
 }
 
 Shader TexturedQuad::m_Shader;

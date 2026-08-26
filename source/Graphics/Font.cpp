@@ -142,6 +142,8 @@ bool Font::LoadGlyph(uint32_t character)
     }
 
     unsigned int texture = 0;
+    glActiveTexture(GL_TEXTURE0);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, m_Face->glyph->bitmap.width, m_Face->glyph->bitmap.rows,
@@ -150,6 +152,8 @@ bool Font::LoadGlyph(uint32_t character)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
     m_Characters.emplace(character, Character{
         texture,
@@ -174,6 +178,7 @@ const Character& Font::GetCharacter(uint32_t character)
 glm::vec2 Font::RenderText(const std::string& text, glm::vec2 position, float scale, glm::vec3 color, int align)
 {
     m_Shader.Bind();
+    m_Shader.SetUniform("text", 0);
     m_Shader.SetUniform("textColor", color);
     m_Shader.SetUniform("u_ProjectionMatrix", *m_ProjectionMatrix);
     m_Shader.SetUniform("u_ViewMatrix", *m_ViewMatrix);
@@ -273,6 +278,7 @@ void Font::RenderBatch()
         glm::vec2(1.0f, 1.0f), glm::vec2(1.0f, 0.0f)
     };
     m_Shader.Bind();
+    m_Shader.SetUniform("text", 0);
     m_Shader.SetUniform("u_ProjectionMatrix", *m_ProjectionMatrix);
     m_Shader.SetUniform("u_ViewMatrix", *m_ViewMatrix);
 
@@ -308,11 +314,28 @@ void Font::RenderBatch()
     m_Shader.Unbind();
 }
 
-Font::~Font()
+void Font::Destroy()
 {
     m_Shader.Delete();
     for (const auto& entry : m_Characters)
         glDeleteTextures(1, &entry.second.TextureID);
-    if (m_Face != nullptr) FT_Done_Face(m_Face);
-    if (m_FreeType != nullptr) FT_Done_FreeType(m_FreeType);
+    m_Characters.clear();
+    m_Mesh.Destroy();
+    m_CharMesh.Destroy();
+    if (m_Face != nullptr)
+    {
+        FT_Done_Face(m_Face);
+        m_Face = nullptr;
+    }
+    if (m_FreeType != nullptr)
+    {
+        FT_Done_FreeType(m_FreeType);
+        m_FreeType = nullptr;
+    }
+    m_Initialized = false;
+}
+
+Font::~Font()
+{
+    Destroy();
 }
