@@ -48,6 +48,8 @@ void cleanUp()
         file << Map::m_CameraPosition.y << "\n";
         file << Map::m_Zoom << "\n";
         file << (int)Map::m_Legend->m_IsOpen << "\n";
+        for (int i = 0; i < IconButton::ButtonTypes::Count; i++)
+            file << (int)Map::m_Legend->m_Show[i] << "\n";
         Log("Saved settings");
     }
     else
@@ -174,6 +176,10 @@ int main()
 
         std::getline(settingsFile, line);
         Map::m_Legend->m_IsOpen = (bool)std::stoi(line);
+
+        // Older settings files end here; keep their existing default visibility.
+        for (int i = 0; i < IconButton::ButtonTypes::Count && std::getline(settingsFile, line); i++)
+            Map::m_Legend->m_Buttons[i]->Click(Map::m_Legend, std::stoi(line) != 0);
 
         if (Map::m_CameraPosition.x > 4500.0f)
             Map::m_CameraPosition.x = 4250.0f;
