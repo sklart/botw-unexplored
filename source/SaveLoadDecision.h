@@ -5,7 +5,7 @@ namespace SaveLoadDecision
     enum class MountStatus
     {
         Success = 1,
-        Cancelled = 0,
+        NotSelected = 0,
         SaveInaccessible = -1,
         NoSave = -2,
         AccountError = -3
@@ -14,7 +14,7 @@ namespace SaveLoadDecision
     enum class ProfilePickerStatus
     {
         Selected,
-        Cancelled,
+        NotSelected,
         Error
     };
 
@@ -27,5 +27,5 @@ namespace SaveLoadDecision
     };
 
     Outcome Resolve(MountStatus mountStatus, bool requestedMasterMode, bool parseSucceeded);
-    ProfilePickerStatus ResolveProfilePicker(bool transportSucceeded, bool cancelled, bool validUid);
+    ProfilePickerStatus ResolveProfilePicker(bool transportSucceeded, bool validUid);
 }

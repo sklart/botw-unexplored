@@ -87,8 +87,8 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
         return outcome.success;
     }
     // Failed to mount it. Can happen if no profile was choosen, or some other account thing went wrong 
-    if (mountStatus == SaveLoadDecision::MountStatus::Cancelled) {
-        Log("Canceled profile picker");
+    if (mountStatus == SaveLoadDecision::MountStatus::NotSelected) {
+        Log("Profile picker closed without a selection");
 
         return false;
     }
@@ -143,7 +143,17 @@ SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker)
     u64 botwId = 0x01007ef00011e000;
     AccountUid uid = {0};
 
-    MasterModeFileExists = false;   
+    const bool previousMasterModeFileExists = MasterModeFileExists;
+    const bool previousGameIsRunning = GameIsRunning;
+    const bool previousLoadedSavefile = LoadedSavefile;
+    const auto restoreMapLoadState = [&]()
+    {
+        MasterModeFileExists = previousMasterModeFileExists;
+        GameIsRunning = previousGameIsRunning;
+        LoadedSavefile = previousLoadedSavefile;
+    };
+
+    MasterModeFileExists = false;
     GameIsRunning = false;
     LoadedSavefile = false;
 
@@ -194,14 +204,16 @@ SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker)
     if (openProfilePicker)
     {
         const Accounts::ProfileSelection selection = Accounts::RequestProfileSelection();
-        if (selection.status == Accounts::ProfileSelectionStatus::Cancelled)
+        if (selection.status == Accounts::ProfileSelectionStatus::NotSelected)
         {
             accountExit();
-            return SaveLoadDecision::MountStatus::Cancelled;
+            restoreMapLoadState();
+            return SaveLoadDecision::MountStatus::NotSelected;
         }
         if (selection.status != Accounts::ProfileSelectionStatus::Selected)
         {
             accountExit();
+            restoreMapLoadState();
             return SaveLoadDecision::MountStatus::AccountError;
         }
         uid = selection.uid;
@@ -238,14 +250,16 @@ SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker)
         {
             Log("Opening profile picker");
             const Accounts::ProfileSelection selection = Accounts::RequestProfileSelection();
-            if (selection.status == Accounts::ProfileSelectionStatus::Cancelled)
+            if (selection.status == Accounts::ProfileSelectionStatus::NotSelected)
             {
                 accountExit();
-                return SaveLoadDecision::MountStatus::Cancelled;
+                restoreMapLoadState();
+                return SaveLoadDecision::MountStatus::NotSelected;
             }
             if (selection.status != Accounts::ProfileSelectionStatus::Selected)
             {
                 accountExit();
+                restoreMapLoadState();
                 return SaveLoadDecision::MountStatus::AccountError;
             }
             uid = selection.uid;

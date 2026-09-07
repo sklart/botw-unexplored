@@ -15,11 +15,11 @@ int main()
     assert(Resolve(MountStatus::SaveInaccessible, true, true).masterModeLoaded);
     assert(!Resolve(MountStatus::SaveInaccessible, false, false).success);
     assert(Resolve(MountStatus::SaveInaccessible, false, false).showGameRunningDialog);
-    assert(!Resolve(MountStatus::Cancelled, false, true).success);
+    assert(!Resolve(MountStatus::NotSelected, false, true).success);
     assert(!Resolve(MountStatus::NoSave, false, true).success);
     assert(!Resolve(MountStatus::AccountError, false, true).success);
-    assert(SaveLoadDecision::ResolveProfilePicker(true, false, true) == SaveLoadDecision::ProfilePickerStatus::Selected);
-    assert(SaveLoadDecision::ResolveProfilePicker(true, true, true) == SaveLoadDecision::ProfilePickerStatus::Cancelled);
-    assert(SaveLoadDecision::ResolveProfilePicker(false, false, true) == SaveLoadDecision::ProfilePickerStatus::Error);
-    assert(SaveLoadDecision::ResolveProfilePicker(true, false, false) == SaveLoadDecision::ProfilePickerStatus::Error);
+    assert(SaveLoadDecision::ResolveProfilePicker(true, true) == SaveLoadDecision::ProfilePickerStatus::Selected);
+    assert(SaveLoadDecision::ResolveProfilePicker(true, false) == SaveLoadDecision::ProfilePickerStatus::NotSelected);
+    assert(SaveLoadDecision::ResolveProfilePicker(false, true) == SaveLoadDecision::ProfilePickerStatus::Error);
+    assert(static_cast<int>(MountStatus::NotSelected) != static_cast<int>(MountStatus::NoSave));
 }
