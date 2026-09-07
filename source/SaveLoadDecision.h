@@ -27,5 +27,5 @@ namespace SaveLoadDecision
     };
 
     Outcome Resolve(MountStatus mountStatus, bool requestedMasterMode, bool parseSucceeded);
-    ProfilePickerStatus ResolveProfilePicker(bool transportSucceeded, unsigned long long appletResult, bool validUid);
+    ProfilePickerStatus ResolveProfilePicker(bool transportSucceeded, bool cancelled, bool validUid);
 }

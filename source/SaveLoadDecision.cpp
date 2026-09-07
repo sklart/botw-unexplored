@@ -14,10 +14,12 @@ SaveLoadDecision::Outcome SaveLoadDecision::Resolve(MountStatus mountStatus, boo
 }
 
 SaveLoadDecision::ProfilePickerStatus SaveLoadDecision::ResolveProfilePicker(bool transportSucceeded,
-                                                                               unsigned long long appletResult,
+                                                                               bool cancelled,
                                                                                bool validUid)
 {
-    if (!transportSucceeded || !validUid)
+    if (!transportSucceeded)
         return ProfilePickerStatus::Error;
-    return appletResult == 0 ? ProfilePickerStatus::Selected : ProfilePickerStatus::Cancelled;
+    if (cancelled)
+        return ProfilePickerStatus::Cancelled;
+    return validUid ? ProfilePickerStatus::Selected : ProfilePickerStatus::Error;
 }

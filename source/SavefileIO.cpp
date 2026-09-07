@@ -147,16 +147,7 @@ SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker)
     GameIsRunning = false;
     LoadedSavefile = false;
 
-    if (openProfilePicker)
-    {
-        const Accounts::ProfileSelection selection = Accounts::RequestProfileSelection();
-        if (selection.status == Accounts::ProfileSelectionStatus::Cancelled)
-            return SaveLoadDecision::MountStatus::Cancelled;
-        if (selection.status != Accounts::ProfileSelectionStatus::Selected)
-            return SaveLoadDecision::MountStatus::AccountError;
-        uid = selection.uid;
-    }
-    else
+    if (!openProfilePicker)
     {
         // Use cached values
         uid.uid[0] = AccountUid1;
@@ -195,14 +186,27 @@ SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker)
     
     // Required for getting users
     rc = accountInitialize(AccountServiceType_Administrator);
-    const bool accountServiceInitialized = R_SUCCEEDED(rc);
     if (R_FAILED(rc)) {
         Log("accountInitialize() failed");
         return SaveLoadDecision::MountStatus::AccountError;
     }
 
-    // If the manual profile selection wasn't choosen 
-    if (!accountUidIsValid(&uid))
+    if (openProfilePicker)
+    {
+        const Accounts::ProfileSelection selection = Accounts::RequestProfileSelection();
+        if (selection.status == Accounts::ProfileSelectionStatus::Cancelled)
+        {
+            accountExit();
+            return SaveLoadDecision::MountStatus::Cancelled;
+        }
+        if (selection.status != Accounts::ProfileSelectionStatus::Selected)
+        {
+            accountExit();
+            return SaveLoadDecision::MountStatus::AccountError;
+        }
+        uid = selection.uid;
+    }
+    else if (!accountUidIsValid(&uid))
     {
         rc = accountGetLastOpenedUser(&uid);
         bool couldGetUserAutomatically = false;
@@ -248,17 +252,15 @@ SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker)
         }
     }
 
-    if (accountServiceInitialized)
-        accountExit();
+    accountExit();
 
     AccountUid1 = uid.uid[0];
     AccountUid2 = uid.uid[1];
 
-    // Check if the user canceled the dialog (if so, the uid is not valid)
     if (!accountUidIsValid(&uid))
     {
-        Log("Invalid account uid. The user canceled the profile picker");
-        return SaveLoadDecision::MountStatus::Cancelled;
+        Log("No valid account uid was selected");
+        return SaveLoadDecision::MountStatus::AccountError;
     } else {
         Log("Valid account uid from whatever profile selection method");
     }

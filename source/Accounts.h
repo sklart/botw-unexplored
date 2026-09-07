@@ -1,7 +1,5 @@
 #include <switch.h>
 
-#include <string>
-
 #include "SaveLoadDecision.h"
 
 namespace Accounts
@@ -14,7 +12,6 @@ namespace Accounts
         AccountUid uid = {};
     };
 
+    // The caller must keep accountInitialize() active for this invocation.
     ProfileSelection RequestProfileSelection();
-
-    std::string GetNickname(AccountUid uid);
 }

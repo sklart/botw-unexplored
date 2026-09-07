@@ -18,8 +18,8 @@ int main()
     assert(!Resolve(MountStatus::Cancelled, false, true).success);
     assert(!Resolve(MountStatus::NoSave, false, true).success);
     assert(!Resolve(MountStatus::AccountError, false, true).success);
-    assert(SaveLoadDecision::ResolveProfilePicker(true, 0, true) == SaveLoadDecision::ProfilePickerStatus::Selected);
-    assert(SaveLoadDecision::ResolveProfilePicker(true, 1, true) == SaveLoadDecision::ProfilePickerStatus::Cancelled);
-    assert(SaveLoadDecision::ResolveProfilePicker(false, 0, true) == SaveLoadDecision::ProfilePickerStatus::Error);
-    assert(SaveLoadDecision::ResolveProfilePicker(true, 0, false) == SaveLoadDecision::ProfilePickerStatus::Error);
+    assert(SaveLoadDecision::ResolveProfilePicker(true, false, true) == SaveLoadDecision::ProfilePickerStatus::Selected);
+    assert(SaveLoadDecision::ResolveProfilePicker(true, true, true) == SaveLoadDecision::ProfilePickerStatus::Cancelled);
+    assert(SaveLoadDecision::ResolveProfilePicker(false, false, true) == SaveLoadDecision::ProfilePickerStatus::Error);
+    assert(SaveLoadDecision::ResolveProfilePicker(true, false, false) == SaveLoadDecision::ProfilePickerStatus::Error);
 }
