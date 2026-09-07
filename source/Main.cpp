@@ -1,4 +1,5 @@
 #include <fstream>
+#include <algorithm>
 #include <cstdint>
 #include <iostream>
 #include <iomanip>
@@ -18,14 +19,47 @@
 #include "Accounts.h"
 #include "Dialog.h"
 #include "Legend.h"
+#include "Localization.h"
 #include "Log.h"
 #include "MapObject.hpp"
+#include "Settings.h"
 
 bool openGLInitialized = false;
 bool nxLinkInitialized = false;
 bool socketInitialized = false;
 int s_nxlinkSock = -1;
 bool cleanupComplete = false;
+
+static SettingsIO::Settings GetCurrentSettings()
+{
+    SettingsIO::Settings settings;
+    settings.cameraX = Map::m_CameraPosition.x;
+    settings.cameraY = Map::m_CameraPosition.y;
+    settings.zoom = Map::m_Zoom;
+    settings.legendOpen = Map::m_Legend->m_IsOpen;
+    for (int i = 0; i < IconButton::ButtonTypes::Count; ++i)
+        settings.visible[i] = Map::m_Legend->m_Show[i];
+    settings.language = static_cast<int>(Localization::GetLanguage());
+    return settings;
+}
+
+static bool SaveSettings()
+{
+    std::ofstream file("sdmc:/switch/botw-unexplored/settings.txt");
+    return file.is_open() && SettingsIO::Save(file, GetCurrentSettings());
+}
+
+static void ApplySettings(const SettingsIO::Settings& settings)
+{
+    Map::m_CameraPosition.x = std::max(-4250.0f, std::min(4250.0f, settings.cameraX));
+    Map::m_CameraPosition.y = std::max(-1750.0f, std::min(2250.0f, settings.cameraY));
+    Map::m_Zoom = std::max(0.1f, std::min(10.0f, settings.zoom));
+    Map::m_Legend->m_IsOpen = settings.legendOpen;
+    for (int i = 0; i < IconButton::ButtonTypes::Count; ++i)
+        Map::m_Legend->m_Buttons[i]->Click(Map::m_Legend, settings.visible[i]);
+    if (settings.language >= 0 && settings.language <= static_cast<int>(Localization::Language::Spanish))
+        Localization::SetLanguage(static_cast<Localization::Language>(settings.language));
+}
 
 static void deinitNxLink()
 {
@@ -46,20 +80,10 @@ void cleanUp()
     if (!SavefileIO::DirectoryExists("sdmc:/switch/botw-unexplored"))
         mkdir("sdmc:/switch/botw-unexplored", 0777);
 
-    std::ofstream file("sdmc:/switch/botw-unexplored/settings.txt");
-    if (file.is_open() && Map::m_Legend != nullptr)
-    {
-        file << Map::m_CameraPosition.x << "\n";
-        file << Map::m_CameraPosition.y << "\n";
-        file << Map::m_Zoom << "\n";
-        file << (int)Map::m_Legend->m_IsOpen << "\n";
-        for (int i = 0; i < IconButton::ButtonTypes::Count; i++)
-            file << (int)Map::m_Legend->m_Show[i] << "\n";
+    if (Map::m_Legend != nullptr && SaveSettings())
         Log("Saved settings");
-    }
     else
         Log("Failed top open settings file (cleanUp())");
-    file.close();
 
     // Save marked koroks
     if (SavefileIO::GameIsRunning && Map::m_Koroks != nullptr)
@@ -169,36 +193,22 @@ int main()
     }
     Map::m_Pad = &pad;
 
-    // Load settings if they exist
+    // Load settings if they exist. Legacy settings are immediately rewritten in the versioned format.
     std::ifstream settingsFile("sdmc:/switch/botw-unexplored/settings.txt");
     if (settingsFile.is_open())
     {
-        std::string line;
-
-        std::getline(settingsFile, line);
-        Map::m_CameraPosition.x = std::stof(line);
-
-        std::getline(settingsFile, line);
-        Map::m_CameraPosition.y = std::stof(line);
-
-        std::getline(settingsFile, line);
-        Map::m_Zoom = std::stof(line);
-
-        std::getline(settingsFile, line);
-        Map::m_Legend->m_IsOpen = (bool)std::stoi(line);
-
-        // Older settings files end here; keep their existing default visibility.
-        for (int i = 0; i < IconButton::ButtonTypes::Count && std::getline(settingsFile, line); i++)
-            Map::m_Legend->m_Buttons[i]->Click(Map::m_Legend, std::stoi(line) != 0);
-
-        if (Map::m_CameraPosition.x > 4500.0f)
-            Map::m_CameraPosition.x = 4250.0f;
-        if (Map::m_CameraPosition.x < -4500.0f)
-            Map::m_CameraPosition.x = -4250.0f;
-        if (Map::m_CameraPosition.y > 2500.0f)
-            Map::m_CameraPosition.y = 2250.0f;
-        if (Map::m_CameraPosition.y < -2000.0f)
-            Map::m_CameraPosition.y = -1750.0f;
+        SettingsIO::Settings settings;
+        const SettingsIO::LoadResult result = SettingsIO::Load(settingsFile, settings);
+        if (result == SettingsIO::LoadResult::Current || result == SettingsIO::LoadResult::Legacy)
+        {
+            ApplySettings(settings);
+            if (result == SettingsIO::LoadResult::Legacy && !SaveSettings())
+                Log("Failed to migrate legacy settings");
+        }
+        else if (result == SettingsIO::LoadResult::FutureVersion)
+            Log("Settings file uses an unsupported future version");
+        else if (result == SettingsIO::LoadResult::Invalid)
+            Log("Ignoring invalid settings file");
     }
     else
     {

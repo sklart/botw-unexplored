@@ -41,11 +41,13 @@ namespace Localization
         LoadMasterMode,
         LoadNormalMode,
         Controls,
-        LanguageName
+        LanguageName,
+        Count
     };
 
     const std::string& Get(Text text);
     Language GetLanguage();
+    void SetLanguage(Language language);
     void ToggleLanguage();
     void Load();
     void Save();

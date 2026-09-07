@@ -48,6 +48,10 @@ namespace
         "X: открыть легенду", "BotW запущена.", "Загружено старое сохранение", "Y: режим мастера",
         "Y: обычный режим", "L/R: масштаб  (-): профиль  (+): выход", "RU"
     };
+
+    static_assert(sizeof(english) / sizeof(english[0]) == static_cast<size_t>(Localization::Text::Count), "English localization is incomplete");
+    static_assert(sizeof(russian) / sizeof(russian[0]) == static_cast<size_t>(Localization::Text::Count), "Russian localization is incomplete");
+    static_assert(sizeof(spanish) / sizeof(spanish[0]) == static_cast<size_t>(Localization::Text::Count), "Spanish localization is incomplete");
 }
 
 const std::string& Localization::Get(Text text)
@@ -61,6 +65,11 @@ const std::string& Localization::Get(Text text)
 Localization::Language Localization::GetLanguage()
 {
     return currentLanguage;
+}
+
+void Localization::SetLanguage(Language language)
+{
+    currentLanguage = language;
 }
 
 void Localization::ToggleLanguage()
