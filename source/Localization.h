@@ -42,12 +42,22 @@ namespace Localization
         LoadNormalMode,
         Controls,
         LanguageName,
+        Missing,
+        Completed,
+        All,
+        Position,
+        Found,
+        NotFound,
+        ObjectInfo,
+        NextMissing,
         Count
     };
 
     const std::string& Get(Text text);
     Language GetLanguage();
     void SetLanguage(Language language);
+    const std::string& GetShowModeName(int showMode);
+    const std::string& GetObjectTypeName(int objectType);
     void ToggleLanguage();
     void Load();
     void Save();

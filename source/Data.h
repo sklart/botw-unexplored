@@ -6,6 +6,8 @@
 #include <vector>
 #include <map>
 
+#include "ObjectTypes.h"
+
 namespace Data
 {
     struct KorokPath

@@ -5,6 +5,8 @@
 #include <glm/gtc/matrix_inverse.hpp>
 
 #include "Map.h"
+#include "MapObject.hpp"
+#include "MapLocation.h"
 #include "SavefileIO.h"
 #include "Localization.h"
 
@@ -170,6 +172,15 @@ bool Legend::IsPositionOnLegend(glm::vec2 position)
     return false;
 }
 
+bool Legend::ShouldShow(bool found) const
+{
+    if (m_ShowMode == ShowMode::Missing)
+        return !found;
+    if (m_ShowMode == ShowMode::Completed)
+        return found;
+    return true;
+}
+
 Legend::~Legend()
 {
     for (unsigned int i = 0; i < m_Buttons.size(); i++)
@@ -278,38 +289,75 @@ void IconButton::Render()
     switch (m_Type)
     {
     case Koroks:
-        countString = std::to_string(SavefileIO::foundKoroks.size()) + "/" + std::to_string(Data::KoroksCount);
+    {
+        int found = 0;
+        for (int i = 0; i < Data::KoroksCount; ++i) found += Map::m_Koroks[i].m_Found;
+        countString = std::to_string(found) + "/" + std::to_string(Data::KoroksCount);
         break;
+    }
     case Shrines:
+    {
+        int found = 0;
+        for (int i = 0; i < Data::ShrineCount; ++i) found += Map::m_Shrines[i].m_Found;
         if (!SavefileIO::HasDLC)
-            countString = std::to_string(SavefileIO::foundShrines.size()) + "/" + std::to_string(Data::ShrineCount);
+            countString = std::to_string(found) + "/" + std::to_string(Data::ShrineCount);
         else
-            countString = std::to_string(SavefileIO::foundShrines.size() + SavefileIO::foundDLCShrines.size()) + "/" +
+        {
+            for (int i = 0; i < Data::DLCShrineCount; ++i) found += Map::m_DLCShrines[i].m_Found;
+            countString = std::to_string(found) + "/" +
                           std::to_string(Data::ShrineCount + Data::DLCShrineCount);
+        }
         break;
+    }
     case Hinoxes:
-        countString = std::to_string(SavefileIO::defeatedHinoxes.size()) + "/" + std::to_string(Data::HinoxesCount);
+    {
+        int found = 0;
+        for (int i = 0; i < Data::HinoxesCount; ++i) found += Map::m_Hinoxes[i].m_Found;
+        countString = std::to_string(found) + "/" + std::to_string(Data::HinoxesCount);
         break;
+    }
     case Taluses:
-        countString = std::to_string(SavefileIO::defeatedTaluses.size()) + "/" + std::to_string(Data::TalusesCount);
+    {
+        int found = 0;
+        for (int i = 0; i < Data::TalusesCount; ++i) found += Map::m_Taluses[i].m_Found;
+        countString = std::to_string(found) + "/" + std::to_string(Data::TalusesCount);
         break;
+    }
     case Moldugas:
-        countString = std::to_string(SavefileIO::defeatedMoldugas.size()) + "/" + std::to_string(Data::MoldugasCount);
+    {
+        int found = 0;
+        for (int i = 0; i < Data::MoldugasCount; ++i) found += Map::m_Moldugas[i].m_Found;
+        countString = std::to_string(found) + "/" + std::to_string(Data::MoldugasCount);
         break;
+    }
     case Locations:
-        countString = std::to_string(SavefileIO::visitedLocations.size()) + "/" + std::to_string(Data::LocationsCount);
+    {
+        int found = 0;
+        for (int i = 0; i < Data::LocationsCount; ++i) found += Map::m_Locations[i].m_Found;
+        countString = std::to_string(found) + "/" + std::to_string(Data::LocationsCount);
         break;
+    }
 
     default:
         break;
     }
 
-    Map::m_Font.AddTextToBatch(Localization::Get(static_cast<Localization::Text>(static_cast<int>(Localization::Text::Koroks) + static_cast<int>(m_Type))), mainTextPosition, 0.40f, glm::vec3(1.0), ALIGN_LEFT, 150.0f);
+    const std::string& label = m_Type == ShowCompleted ? Localization::GetShowModeName(static_cast<int>(Map::m_Legend->m_ShowMode)) :
+        Localization::Get(static_cast<Localization::Text>(static_cast<int>(Localization::Text::Koroks) + static_cast<int>(m_Type)));
+    Map::m_Font.AddTextToBatch(label, mainTextPosition, 0.40f, glm::vec3(1.0), ALIGN_LEFT, 150.0f);
     Map::m_Font.AddTextToBatch(countString, countTextPosition, 0.42f, glm::vec3(1.0), ALIGN_RIGHT);
 }
 
 bool IconButton::Click(Legend* legend)
 {
+    if (m_Type == ShowCompleted)
+    {
+        legend->m_ShowMode = static_cast<ShowMode>((static_cast<int>(legend->m_ShowMode) + 1) % 3);
+        m_IsToggled = legend->m_ShowMode != ShowMode::Missing;
+        legend->m_Show[m_Type] = m_IsToggled;
+        m_Button.m_Color = m_IsToggled ? HighlightedColor : DefaultColor;
+        return m_IsToggled;
+    }
     m_IsToggled = !m_IsToggled;
 
     if (m_IsToggled)
@@ -324,6 +372,13 @@ bool IconButton::Click(Legend* legend)
 
 bool IconButton::Click(Legend* legend, bool toggled)
 {
+    if (m_Type == ShowCompleted)
+    {
+        m_IsToggled = legend->m_ShowMode != ShowMode::Missing;
+        legend->m_Show[m_Type] = m_IsToggled;
+        m_Button.m_Color = m_IsToggled ? HighlightedColor : DefaultColor;
+        return m_IsToggled;
+    }
     m_IsToggled = toggled;
 
     if (m_IsToggled)

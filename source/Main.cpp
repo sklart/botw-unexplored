@@ -23,6 +23,7 @@
 #include "Log.h"
 #include "MapObject.hpp"
 #include "Settings.h"
+#include "ManualProgress.h"
 
 bool openGLInitialized = false;
 bool nxLinkInitialized = false;
@@ -39,6 +40,7 @@ static SettingsIO::Settings GetCurrentSettings()
     settings.legendOpen = Map::m_Legend->m_IsOpen;
     for (int i = 0; i < IconButton::ButtonTypes::Count; ++i)
         settings.visible[i] = Map::m_Legend->m_Show[i];
+    settings.showMode = static_cast<int>(Map::m_Legend->m_ShowMode);
     settings.language = static_cast<int>(Localization::GetLanguage());
     return settings;
 }
@@ -49,12 +51,20 @@ static bool SaveSettings()
     return file.is_open() && SettingsIO::Save(file, GetCurrentSettings());
 }
 
+static bool SaveManualProgress()
+{
+    std::ofstream file("sdmc:/switch/botw-unexplored/manual_progress.dat");
+    return file.is_open() && ManualProgress::Save(file);
+}
+
 static void ApplySettings(const SettingsIO::Settings& settings)
 {
     Map::m_CameraPosition.x = std::max(-4250.0f, std::min(4250.0f, settings.cameraX));
     Map::m_CameraPosition.y = std::max(-1750.0f, std::min(2250.0f, settings.cameraY));
+    Map::m_CursorPosition = Map::m_CameraPosition;
     Map::m_Zoom = std::max(0.1f, std::min(10.0f, settings.zoom));
     Map::m_Legend->m_IsOpen = settings.legendOpen;
+    Map::m_Legend->m_ShowMode = static_cast<ShowMode>(settings.showMode);
     for (int i = 0; i < IconButton::ButtonTypes::Count; ++i)
         Map::m_Legend->m_Buttons[i]->Click(Map::m_Legend, settings.visible[i]);
     if (settings.language >= 0 && settings.language <= static_cast<int>(Localization::Language::Spanish))
@@ -85,30 +95,10 @@ void cleanUp()
     else
         Log("Failed top open settings file (cleanUp())");
 
-    // Save marked koroks
-    if (SavefileIO::GameIsRunning && Map::m_Koroks != nullptr)
-    {
-        std::ofstream koroksFile("sdmc:/switch/botw-unexplored/koroks.txt");
-        if (koroksFile.is_open())
-        {
-            for (int i = 0; i < Data::KoroksCount; i++)
-                koroksFile << (int)Map::m_Koroks[i].m_Found << "\n";
-
-            Log("Saved manually marked koroks");
-        }
-        else
-            Log("Failed to open koroks file (cleanUp())");
-
-        koroksFile.close();
-    }
+    if (SaveManualProgress())
+        Log("Saved manual progress");
     else
-    {
-        // Else delete the file so only the actually found koroks are displayed
-        if (remove("sdmc:/switch/botw-unexplored/koroks.txt") != 0)
-            Log("Couldn't delete koroks.txt. It probably doesn't exist");
-        else
-            Log("koroks.txt successfully deleted to avoid desync");
-    }
+        Log("Failed to save manual progress");
 
     Log("SHUTDOWN: map cleanup begin");
     Map::Destroy();
@@ -217,6 +207,10 @@ int main()
 
     settingsFile.close();
 
+    std::ifstream manualProgressFile("sdmc:/switch/botw-unexplored/manual_progress.dat");
+    if (manualProgressFile.is_open() && !ManualProgress::Load(manualProgressFile))
+        Log("Ignoring invalid manual progress file");
+
     bool hasDoneFirstDraw = false;
     bool hasLoadedSave = false;
 
@@ -249,36 +243,15 @@ int main()
 
             Map::UpdateMapObjects();
 
-            // Load manually checked koroks (but only if the game is running)
-            // Override the checking from the savefile
-            if (SavefileIO::GameIsRunning)
-            {
-                std::ifstream koroksFile("sdmc:/switch/botw-unexplored/koroks.txt");
-                if (koroksFile.is_open())
-                {
-                    for (int i = 0; i < Data::KoroksCount; i++)
-                    {
-                        std::string line;
-                        std::getline(koroksFile, line);
-                        Map::m_Koroks[i].m_Found = (bool)std::stoi(line);
-                    }
-
-                    Log("Loaded manually marked koroks");
-                }
-                else
-                    Log("Failed to open koroks file (init())");
-
-                koroksFile.close();
-            }
         }
 
         eglSwapBuffers(s_display, s_surface);
 
+#ifdef BOTW_DEBUG_GL
         GLenum err;
         while ((err = glGetError()) != GL_NO_ERROR)
-        {
             Log("OpenGL error", (int)err);
-        }
+#endif
 
         hasDoneFirstDraw = true;
     }

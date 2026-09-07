@@ -40,7 +40,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 
 APP_TITLE	:=	BotW Unexplored
 APP_AUTHOR	:=	BigBear
-APP_VERSION :=  2.0.0
+APP_VERSION :=  2.2.0
 
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
@@ -54,8 +54,15 @@ ROMFS		:=	romfs
 #---------------------------------------------------------------------------------
 ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
+PKG_CONFIG ?= aarch64-none-elf-pkg-config
+FREETYPE_CFLAGS := $(shell $(PKG_CONFIG) --cflags freetype2 2>/dev/null)
+FREETYPE_LIBS := $(shell $(PKG_CONFIG) --libs freetype2 2>/dev/null)
+ifeq ($(strip $(FREETYPE_CFLAGS)),)
 FREETYPE_CFLAGS := -I$(PORTLIBS)/include/freetype2
 FREETYPE_LIBS := -lfreetype -lbz2 -lpng16 -lz -lharfbuzz -lm
+endif
+
+DEBUG ?= 0
 
 CFLAGS := -g -Wall -O2 -ffunction-sections \
             $(ARCH) $(DEFINES) $(FREETYPE_CFLAGS)
@@ -63,6 +70,11 @@ CFLAGS := -g -Wall -O2 -ffunction-sections \
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions
+
+ifeq ($(DEBUG),1)
+CFLAGS += -DBOTW_DEBUG_GL
+CXXFLAGS += -DBOTW_DEBUG_GL
+endif
 
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)

@@ -11,12 +11,39 @@
 #include "Dialog.h"
 #include "MapObject.hpp"
 #include "KorokDialog.h"
+#include "ObjectInfo.h"
+#include "ObjectModel.h"
 #include "Log.h"
 #include "Localization.h"
+#include "ManualProgress.h"
 
 #include "SavefileIO.h"
 
 constexpr float MapScale = 0.25f;
+
+namespace
+{
+    ManualProgress::Context CurrentProgressContext()
+    {
+        ManualProgress::Context context;
+        context.profileId1 = SavefileIO::AccountUid1;
+        context.profileId2 = SavefileIO::AccountUid2;
+        context.masterMode = Map::m_LoadMasterMode;
+        return context;
+    }
+
+    bool ResolveFound(Data::ObjectType type, uint32_t hash, bool foundInSave)
+    {
+        const ManualProgress::Context context = CurrentProgressContext();
+        if (foundInSave)
+        {
+            if (!SavefileIO::GameIsRunning)
+                ManualProgress::ConfirmFromSave(context, type, hash);
+            return true;
+        }
+        return SavefileIO::GameIsRunning && ManualProgress::IsMarkedFound(context, type, hash);
+    }
+}
 
 bool Map::Init()
 {
@@ -43,6 +70,7 @@ bool Map::Init()
     m_LineRenderer = new LineRenderer();
 
     m_KorokDialog = new KorokDialog();
+    m_ObjectInfo = new ObjectInfo();
 
     // Create UI
     m_Legend = new Legend();
@@ -98,10 +126,11 @@ void Map::UpdateMapObjects()
         m_Koroks[i].m_ObjectData = &Data::Koroks[i];
 
         // Check if the korok has been found (if the found vector contains it)
-        m_Koroks[i].m_Found = std::find(
+        const bool foundInSave = std::find(
             SavefileIO::foundKoroks.begin(),
             SavefileIO::foundKoroks.end(),
             &Data::Koroks[i]) != SavefileIO::foundKoroks.end();
+        m_Koroks[i].m_Found = ResolveFound(Data::ObjectType::Korok, Data::Koroks[i].hash, foundInSave);
     }
 
     for (int i = 0; i < Data::ShrineCount; i++) // Shrine
@@ -109,10 +138,11 @@ void Map::UpdateMapObjects()
         m_Shrines[i].m_Position = glm::vec2(Data::Shrines[i].x, -Data::Shrines[i].y) * MapScale;
 
         // Check if the korok has been found (if the found vector contains it)
-        m_Shrines[i].m_Found = std::find(
+        const bool foundInSave = std::find(
             SavefileIO::foundShrines.begin(),
             SavefileIO::foundShrines.end(),
             &Data::Shrines[i]) != SavefileIO::foundShrines.end();
+        m_Shrines[i].m_Found = ResolveFound(Data::ObjectType::Shrine, Data::Shrines[i].hash, foundInSave);
     }
 
     for (int i = 0; i < Data::DLCShrineCount; i++) // DLC Shrine
@@ -120,10 +150,11 @@ void Map::UpdateMapObjects()
         m_DLCShrines[i].m_Position = glm::vec2(Data::DLCShrines[i].x, -Data::DLCShrines[i].y) * MapScale;
 
         // Check if the korok has been found (if the found vector contains it)
-        m_DLCShrines[i].m_Found = std::find(
+        const bool foundInSave = std::find(
             SavefileIO::foundDLCShrines.begin(),
             SavefileIO::foundDLCShrines.end(),
             &Data::DLCShrines[i]) != SavefileIO::foundDLCShrines.end();
+        m_DLCShrines[i].m_Found = ResolveFound(Data::ObjectType::DLCShrine, Data::DLCShrines[i].hash, foundInSave);
     }
 
     for (int i = 0; i < Data::HinoxesCount; i++) // Hinox
@@ -131,10 +162,11 @@ void Map::UpdateMapObjects()
         m_Hinoxes[i].m_Position = glm::vec2(Data::Hinoxes[i].x, -Data::Hinoxes[i].y) * MapScale;
 
         // Check if the korok has been found (if the found vector contains it)
-        m_Hinoxes[i].m_Found = std::find(
+        const bool foundInSave = std::find(
             SavefileIO::defeatedHinoxes.begin(),
             SavefileIO::defeatedHinoxes.end(),
             &Data::Hinoxes[i]) != SavefileIO::defeatedHinoxes.end();
+        m_Hinoxes[i].m_Found = ResolveFound(Data::ObjectType::Hinox, Data::Hinoxes[i].hash, foundInSave);
     }
 
     for (int i = 0; i < Data::TalusesCount; i++) // Talus
@@ -142,10 +174,11 @@ void Map::UpdateMapObjects()
         m_Taluses[i].m_Position = glm::vec2(Data::Taluses[i].x, -Data::Taluses[i].y) * MapScale;
 
         // Check if the korok has been found (if the found vector contains it)
-        m_Taluses[i].m_Found = std::find(
+        const bool foundInSave = std::find(
             SavefileIO::defeatedTaluses.begin(),
             SavefileIO::defeatedTaluses.end(),
             &Data::Taluses[i]) != SavefileIO::defeatedTaluses.end();
+        m_Taluses[i].m_Found = ResolveFound(Data::ObjectType::Talus, Data::Taluses[i].hash, foundInSave);
     }
 
     for (int i = 0; i < Data::MoldugasCount; i++) // Molduga
@@ -153,10 +186,11 @@ void Map::UpdateMapObjects()
         m_Moldugas[i].m_Position = glm::vec2(Data::Moldugas[i].x, -Data::Moldugas[i].y) * MapScale;
 
         // Check if the korok has been found (if the found vector contains it)
-        m_Moldugas[i].m_Found = std::find(
+        const bool foundInSave = std::find(
             SavefileIO::defeatedMoldugas.begin(),
             SavefileIO::defeatedMoldugas.end(),
             &Data::Moldugas[i]) != SavefileIO::defeatedMoldugas.end();
+        m_Moldugas[i].m_Found = ResolveFound(Data::ObjectType::Molduga, Data::Moldugas[i].hash, foundInSave);
     }
 
     for (int i = 0; i < Data::LocationsCount; i++) // Locations
@@ -165,10 +199,11 @@ void Map::UpdateMapObjects()
         m_Locations[i].m_LocationData = &Data::Locations[i];
 
         // Check if the korok has been found (if the found vector contains it)
-        m_Locations[i].m_Found = std::find(
+        const bool foundInSave = std::find(
             SavefileIO::visitedLocations.begin(),
             SavefileIO::visitedLocations.end(),
             &Data::Locations[i]) != SavefileIO::visitedLocations.end();
+        m_Locations[i].m_Found = ResolveFound(Data::ObjectType::Location, Data::Locations[i].hash, foundInSave);
     }
 
     Log("Updated map objects");
@@ -230,6 +265,8 @@ void Map::Update()
         // Close the korok dialog first, then if it's not open close the legend
         if (m_KorokDialog->m_IsOpen)
             m_KorokDialog->SetOpen(false);
+        else if (m_ObjectInfo->m_IsOpen)
+            m_ObjectInfo->SetOpen(false);
         else if (!m_NoSavefileDialog->m_IsOpen)
             m_Legend->m_IsOpen = !m_Legend->m_IsOpen;
     }
@@ -241,7 +278,7 @@ void Map::Update()
     //     m_ShowAllObjects = false;
 
     // Toggle master mode
-    if (buttonsPressed & HidNpadButton_Y)
+    if ((buttonsPressed & HidNpadButton_Y) && !m_ObjectInfo->m_IsOpen)
     {
         if (SavefileIO::MostRecentMasterModeFile != -1)
         {
@@ -256,9 +293,16 @@ void Map::Update()
     {
         if (m_KorokDialog->m_IsOpen)
         {
-            m_Koroks[m_KorokDialog->m_KorokIndex].m_Found = true;
+            if (SavefileIO::GameIsRunning)
+            {
+                m_Koroks[m_KorokDialog->m_KorokIndex].m_Found = true;
+                ManualProgress::MarkFound(CurrentProgressContext(), Data::ObjectType::Korok,
+                                          m_Koroks[m_KorokDialog->m_KorokIndex].m_ObjectData->hash);
+            }
             m_KorokDialog->SetOpen(false);
         }
+        else
+            MarkSelectedObjectFound();
     }
 
     // Analog stick camera movement
@@ -270,7 +314,34 @@ void Map::Update()
 
     float distanceToCenter = glm::distance(stickLPosition, glm::vec2(0.0f, 0.0f));
     if (distanceToCenter >= deadzone)
+    {
         m_CameraPosition += stickLPosition * (analogStickMovementSpeed / m_Zoom);
+        m_HasTargetCameraPosition = false;
+    }
+
+    if (!m_Legend->m_IsOpen && !m_KorokDialog->m_IsOpen && !m_ObjectInfo->m_IsOpen &&
+        !m_NoSavefileDialog->m_IsOpen && !m_GameRunningDialog->m_IsOpen && !m_MasterModeDialog->m_IsOpen)
+    {
+        const float cursorStep = 12.0f / m_Zoom;
+        if (buttonsPressed & HidNpadButton_Left) m_CursorPosition.x -= cursorStep;
+        if (buttonsPressed & HidNpadButton_Right) m_CursorPosition.x += cursorStep;
+        if (buttonsPressed & HidNpadButton_Up) m_CursorPosition.y += cursorStep;
+        if (buttonsPressed & HidNpadButton_Down) m_CursorPosition.y -= cursorStep;
+        if (buttonsPressed & HidNpadButton_A) OpenNearestObject(m_CursorPosition);
+        if (buttonsPressed & HidNpadButton_ZR) FocusNextMissing();
+    }
+
+    if (m_HasTargetCameraPosition)
+    {
+        const glm::vec2 delta = m_TargetCameraPosition - m_CameraPosition;
+        if (glm::dot(delta, delta) < 1.0f)
+        {
+            m_CameraPosition = m_TargetCameraPosition;
+            m_HasTargetCameraPosition = false;
+        }
+        else
+            m_CameraPosition += delta * 0.12f;
+    }
 
     m_ViewMatrix = glm::mat4(1.0f); // Reset (important)
     m_ViewMatrix = glm::scale(m_ViewMatrix, glm::vec3(m_Zoom, m_Zoom, 0.0f));
@@ -296,11 +367,12 @@ void Map::Update()
                 // Check if the finger was pressed
                 if (state.count == 1)
                 {
+                    m_HasTargetCameraPosition = false;
                     // Check if clicked korok
                     bool clicked = false;
                     for (int i = 0; i < Data::KoroksCount; i++)
                     {
-                        if ((!m_Koroks[i].m_Found || m_Legend->m_Show[IconButton::ShowCompleted]) && m_Koroks[i].IsClicked(touchPosition))
+                        if (m_Legend->ShouldShow(m_Koroks[i].m_Found) && m_Koroks[i].IsClicked(touchPosition))
                         {
                             // Set the korok dialog
                             m_KorokDialog->SetSeed(m_Koroks[i].m_ObjectData->zeldaDungeonId, i);
@@ -315,11 +387,12 @@ void Map::Update()
                     // Hide the korok info if no korok was clicked on
                     if (!clicked)
                     {
-                        //m_KorokDialog->SetOpen(false);
+                        OpenNearestObject(touchPosition / m_Zoom + m_CameraPosition);
+                        clicked = m_ObjectInfo->m_IsOpen;
                     }
 
                     // Only drag if not clicking on korok
-                    m_IsDragging = true;
+                    m_IsDragging = !clicked;
                     m_PrevTouchPosition = touchPosition; // The origin of the drag
                 }
             }
@@ -377,7 +450,7 @@ void Map::Update()
         for (int i = 0; i < Data::LocationsCount; i++)
             m_Locations[i].Update();
 
-        MapLocation::m_ShowAnyway = m_Legend->m_Show[IconButton::ShowCompleted];
+        MapLocation::m_ShowAnyway = m_Legend->m_ShowMode == ShowMode::All;
     }
 
     m_PrevCameraPosition = m_CameraPosition;
@@ -401,7 +474,7 @@ void Map::Render()
                     continue;
 
                 // Don't render if found
-                if (m_Koroks[k].m_Found && !m_Legend->m_Show[IconButton::ShowCompleted])
+                if (!m_Legend->ShouldShow(m_Koroks[k].m_Found))
                     continue;
 
                 Data::KorokPath* path = m_Koroks[k].m_ObjectData->path;
@@ -446,6 +519,9 @@ void Map::Render()
         }
     }
 
+    if (SavefileIO::LoadedSavefile && !m_Legend->m_IsOpen && !m_KorokDialog->m_IsOpen && !m_ObjectInfo->m_IsOpen)
+        m_Font.AddTextToBatch("+", m_CursorPosition, 0.7f / m_Zoom, glm::vec3(1.0f), ALIGN_CENTER);
+
     m_Font.RenderBatch();
 
     // Draw behind legend
@@ -486,6 +562,7 @@ void Map::Render()
     }
 
     m_KorokDialog->Render(m_ProjectionMatrix, m_ViewMatrix);
+    m_ObjectInfo->Render(m_ProjectionMatrix);
 
     glm::mat4 emptyViewMatrix(1.0);
     m_Font.m_ViewMatrix = &emptyViewMatrix; // Don't draw the text relative to the camera
@@ -541,12 +618,98 @@ void Map::Destroy()
     m_MasterModeDialog = nullptr;
     delete m_KorokDialog;
     m_KorokDialog = nullptr;
+    delete m_ObjectInfo;
+    m_ObjectInfo = nullptr;
     delete m_LineRenderer;
     m_LineRenderer = nullptr;
 
     m_Font.Destroy();
     m_MapBackground.Destroy();
     m_MasterModeIcon.Destroy();
+}
+
+void Map::OpenNearestObject(const glm::vec2& mapPosition)
+{
+    struct Candidate
+    {
+        Data::ObjectType type;
+        uint32_t hash;
+        glm::vec2 position;
+        std::string name;
+        bool* found;
+        float distanceSquared;
+    };
+    Candidate best = {Data::ObjectType::Korok, 0, glm::vec2(0.0f), "", nullptr, 1e30f};
+    const float radius = 60.0f / m_Zoom;
+    const float maxDistanceSquared = radius * radius;
+    const auto consider = [&](Data::ObjectType type, uint32_t hash, const glm::vec2& position,
+                              const std::string& name, bool* found)
+    {
+        if (!m_Legend->m_Show[ObjectModel::GetMetadata(type).legendButtonIndex] || !m_Legend->ShouldShow(*found))
+            return;
+        const float distanceSquared = glm::dot(position - mapPosition, position - mapPosition);
+        if (distanceSquared <= maxDistanceSquared && distanceSquared < best.distanceSquared)
+            best = {type, hash, position, name, found, distanceSquared};
+    };
+
+    for (int i = 0; i < Data::KoroksCount; ++i)
+        consider(Data::ObjectType::Korok, Data::Koroks[i].hash, m_Koroks[i].m_Position, "", &m_Koroks[i].m_Found);
+    for (int i = 0; i < Data::ShrineCount; ++i)
+        consider(Data::ObjectType::Shrine, Data::Shrines[i].hash, m_Shrines[i].m_Position, Data::Shrines[i].displayName, &m_Shrines[i].m_Found);
+    for (int i = 0; i < Data::DLCShrineCount; ++i)
+        consider(Data::ObjectType::DLCShrine, Data::DLCShrines[i].hash, m_DLCShrines[i].m_Position, "", &m_DLCShrines[i].m_Found);
+    for (int i = 0; i < Data::HinoxesCount; ++i)
+        consider(Data::ObjectType::Hinox, Data::Hinoxes[i].hash, m_Hinoxes[i].m_Position, "", &m_Hinoxes[i].m_Found);
+    for (int i = 0; i < Data::TalusesCount; ++i)
+        consider(Data::ObjectType::Talus, Data::Taluses[i].hash, m_Taluses[i].m_Position, "", &m_Taluses[i].m_Found);
+    for (int i = 0; i < Data::MoldugasCount; ++i)
+        consider(Data::ObjectType::Molduga, Data::Moldugas[i].hash, m_Moldugas[i].m_Position, "", &m_Moldugas[i].m_Found);
+    for (int i = 0; i < Data::LocationsCount; ++i)
+        consider(Data::ObjectType::Location, Data::Locations[i].hash, m_Locations[i].m_Position,
+                 Localization::GetLocationName(Data::Locations[i].hash, Data::Locations[i].displayName), &m_Locations[i].m_Found);
+
+    if (best.found != nullptr)
+    {
+        m_ObjectInfo->SetObject(best.type, best.hash, best.position, best.name, best.found);
+        m_ObjectInfo->SetOpen(true);
+    }
+}
+
+void Map::MarkSelectedObjectFound()
+{
+    if (!m_ObjectInfo->m_IsOpen || m_ObjectInfo->m_Found == nullptr || *m_ObjectInfo->m_Found || !SavefileIO::GameIsRunning)
+        return;
+    *m_ObjectInfo->m_Found = true;
+    ManualProgress::MarkFound(CurrentProgressContext(), m_ObjectInfo->m_Type, m_ObjectInfo->m_CompletionHash);
+}
+
+void Map::FocusNextMissing()
+{
+    glm::vec2 closest;
+    float bestDistanceSquared = 1e30f;
+    const auto consider = [&](const glm::vec2& position, bool found)
+    {
+        if (found)
+            return;
+        const float distanceSquared = glm::dot(position - m_CameraPosition, position - m_CameraPosition);
+        if (distanceSquared < bestDistanceSquared)
+        {
+            bestDistanceSquared = distanceSquared;
+            closest = position;
+        }
+    };
+    if (m_Legend->m_Show[IconButton::Koroks]) for (int i = 0; i < Data::KoroksCount; ++i) consider(m_Koroks[i].m_Position, m_Koroks[i].m_Found);
+    if (m_Legend->m_Show[IconButton::Shrines]) for (int i = 0; i < Data::ShrineCount; ++i) consider(m_Shrines[i].m_Position, m_Shrines[i].m_Found);
+    if (m_Legend->m_Show[IconButton::Shrines] && SavefileIO::HasDLC) for (int i = 0; i < Data::DLCShrineCount; ++i) consider(m_DLCShrines[i].m_Position, m_DLCShrines[i].m_Found);
+    if (m_Legend->m_Show[IconButton::Hinoxes]) for (int i = 0; i < Data::HinoxesCount; ++i) consider(m_Hinoxes[i].m_Position, m_Hinoxes[i].m_Found);
+    if (m_Legend->m_Show[IconButton::Taluses]) for (int i = 0; i < Data::TalusesCount; ++i) consider(m_Taluses[i].m_Position, m_Taluses[i].m_Found);
+    if (m_Legend->m_Show[IconButton::Moldugas]) for (int i = 0; i < Data::MoldugasCount; ++i) consider(m_Moldugas[i].m_Position, m_Moldugas[i].m_Found);
+    if (m_Legend->m_Show[IconButton::Locations]) for (int i = 0; i < Data::LocationsCount; ++i) consider(m_Locations[i].m_Position, m_Locations[i].m_Found);
+    if (bestDistanceSquared < 1e30f)
+    {
+        m_TargetCameraPosition = closest;
+        m_HasTargetCameraPosition = true;
+    }
 }
 
 TexturedQuad Map::m_MapBackground;
@@ -568,6 +731,9 @@ glm::vec2 Map::m_StartDragPos;
 bool Map::m_IsDragging = false;
 bool Map::m_ShouldExit = false;
 bool Map::m_LoadMasterMode = false;
+glm::vec2 Map::m_CursorPosition(0.0f);
+glm::vec2 Map::m_TargetCameraPosition(0.0f);
+bool Map::m_HasTargetCameraPosition = false;
 
 PadState* Map::m_Pad;
 MapObject<Data::Korok>* Map::m_Koroks;
@@ -580,6 +746,7 @@ MapLocation* Map::m_Locations;
 
 Legend* Map::m_Legend;
 KorokDialog* Map::m_KorokDialog;
+ObjectInfo* Map::m_ObjectInfo;
 Dialog* Map::m_NoSavefileDialog;
 Dialog* Map::m_GameRunningDialog;
 Dialog* Map::m_MasterModeDialog;

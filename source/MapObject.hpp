@@ -138,7 +138,7 @@ void MapObject<T>::Update(bool clear)
 
     if (clear) m_Mesh.Clear();
 
-    if (m_Found && !Map::m_Legend->m_Show[IconButton::ShowCompleted]) 
+    if (!Map::m_Legend->ShouldShow(m_Found))
         return;
     
     // Culling 

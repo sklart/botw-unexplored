@@ -20,12 +20,16 @@ class Legend;
 class Dialog;
 class LineRenderer;
 class KorokDialog;
+class ObjectInfo;
 
 namespace Map
 {
     bool Init();
 
     void UpdateMapObjects();
+    void OpenNearestObject(const glm::vec2& mapPosition);
+    void MarkSelectedObjectFound();
+    void FocusNextMissing();
 
     void Update();
     void Render();
@@ -66,6 +70,9 @@ namespace Map
     extern bool m_IsDragging;
     extern bool m_ShouldExit;
     extern bool m_LoadMasterMode;
+    extern glm::vec2 m_CursorPosition;
+    extern glm::vec2 m_TargetCameraPosition;
+    extern bool m_HasTargetCameraPosition;
 
     extern PadState* m_Pad;
 
@@ -80,6 +87,7 @@ namespace Map
 
     extern Legend* m_Legend;
     extern KorokDialog* m_KorokDialog;
+    extern ObjectInfo* m_ObjectInfo;
     extern Dialog* m_NoSavefileDialog;
     extern Dialog* m_GameRunningDialog;
     extern Dialog* m_MasterModeDialog;

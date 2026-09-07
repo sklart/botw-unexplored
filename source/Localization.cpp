@@ -29,7 +29,8 @@ namespace
         "No", "Yes", "Master mode save file detected", "Would you like to load it?", "Legend", "X - close", "Koroks",
         "Shrines", "Hinoxes", "Taluses", "Moldugas", "Locations", "Show Completed", "B - mark as found",
         "Press X: legend", "BotW is running.", "Loaded older save", "Press Y: master mode",
-        "Press Y: normal mode", "L/R: zoom  (-): user  (+): exit", "EN"
+        "Press Y: normal mode", "L/R: zoom  (-): user  (+): exit", "EN", "Missing", "Completed", "All",
+        "Position", "Found", "Not found", "Object info", "Next missing"
     };
 
     const std::string spanish[] = {
@@ -38,7 +39,8 @@ namespace
         "No", "Sí", "Se detectó una partida en modo maestro", "¿Quieres cargarla?", "Leyenda", "X - cerrar", "Kologs",
         "Santuarios", "Hinóx", "Taludes", "Moldugas", "Ubicaciones", "Mostrar completados", "B - marcar como encontrado",
         "X: leyenda", "BotW está en ejecución.", "Se cargó una partida anterior", "Y: modo maestro",
-        "Y: modo normal", "L/R: zoom  (-): usuario  (+): salir", "ES"
+        "Y: modo normal", "L/R: zoom  (-): usuario  (+): salir", "ES", "Pendientes", "Completados", "Todos",
+        "Posición", "Encontrado", "No encontrado", "Información", "Siguiente pendiente"
     };
     const std::string russian[] = {
         "Выход", "Выбрать другой профиль", "Для этого пользователя не найдены сохранения", "Убедитесь, что выбран правильный профиль.",
@@ -46,7 +48,8 @@ namespace
         "Нет", "Да", "Найдено сохранение режима мастера", "Загрузить его?", "Легенда", "X - закрыть", "Короки",
         "Святилища", "Хиноксы", "Глыбники", "Молдоры", "Локации", "Показывать найденное", "B - отметить найденным",
         "X: открыть легенду", "BotW запущена.", "Загружено старое сохранение", "Y: режим мастера",
-        "Y: обычный режим", "L/R: масштаб  (-): профиль  (+): выход", "RU"
+        "Y: обычный режим", "L/R: масштаб  (-): профиль  (+): выход", "RU", "Не найдено", "Найдено", "Все",
+        "Координаты", "Найдено", "Не найдено", "Информация об объекте", "Следующий не найденный"
     };
 
     static_assert(sizeof(english) / sizeof(english[0]) == static_cast<size_t>(Localization::Text::Count), "English localization is incomplete");
@@ -70,6 +73,21 @@ Localization::Language Localization::GetLanguage()
 void Localization::SetLanguage(Language language)
 {
     currentLanguage = language;
+}
+
+const std::string& Localization::GetShowModeName(int showMode)
+{
+    const int clamped = showMode < 0 || showMode > 2 ? 0 : showMode;
+    return Get(static_cast<Text>(static_cast<int>(Text::Missing) + clamped));
+}
+
+const std::string& Localization::GetObjectTypeName(int objectType)
+{
+    static const Text names[] = {Text::Koroks, Text::Shrines, Text::Shrines, Text::Locations,
+                                 Text::Hinoxes, Text::Taluses, Text::Moldugas};
+    if (objectType < 0 || objectType >= 7)
+        return Get(Text::ObjectInfo);
+    return Get(names[objectType]);
 }
 
 void Localization::ToggleLanguage()

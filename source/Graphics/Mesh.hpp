@@ -148,10 +148,14 @@ void Mesh<VertexT>::UpdateVertices(const std::vector<VertexT>& vertices)
 		glGenBuffers(1, &m_Ebo);
 
 	glBindBuffer(GL_ARRAY_BUFFER, m_Vbo);
-    if (m_UseDynamicBuffer)
+	if (m_UseDynamicBuffer)
+	{
 	    glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(VertexT), &vertices[0]);
+	}
     else
+    {
         glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(VertexT), &vertices[0], GL_STATIC_DRAW);
+    }
 
 	if (!m_Indices.empty())
 	{

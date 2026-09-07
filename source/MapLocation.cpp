@@ -4,6 +4,7 @@
 #include <switch.h>
 
 #include "Map.h"
+#include "Legend.h"
 #include "Localization.h"
 #include "Graphics/BasicVertices.h"
 #include "SavefileIO.h"
@@ -37,7 +38,7 @@ void MapLocation::Update()
 
 void MapLocation::Render()
 {
-    if (m_Found && !m_ShowAnyway) return;
+    if (!Map::m_Legend->ShouldShow(m_Found)) return;
 
     // The overview is too dense for readable labels. They become available while zooming in.
     if (Map::m_Zoom < 0.55f) return;

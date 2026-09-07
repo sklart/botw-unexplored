@@ -4,6 +4,13 @@
 
 class Legend;
 
+enum class ShowMode
+{
+    Missing = 0,
+    Completed = 1,
+    All = 2
+};
+
 class IconButton
 {
 public:
@@ -63,6 +70,7 @@ public:
 
     bool IsPositionOnLegend(glm::vec2 position);
     void UpdateSelectedButton();
+    bool ShouldShow(bool found) const;
 
     ~Legend();
 
@@ -77,8 +85,7 @@ public:
 
     int m_HighlightedButton = 0;
 
-    bool m_ShowAll = true;
-    bool m_ShowNone = false;
+    ShowMode m_ShowMode = ShowMode::Missing;
     bool m_IsOpen = true;
 
     bool m_Show[IconButton::ButtonTypes::Count];

@@ -7,23 +7,7 @@
 
 #include "../Log.h"
 #include "BasicVertices.h"
-
-std::u32string DecodeUtf8(const std::string& text)
-{
-    std::u32string result;
-    for (size_t i = 0; i < text.size();)
-    {
-        const unsigned char first = static_cast<unsigned char>(text[i]);
-        uint32_t codepoint = first;
-        size_t length = 1;
-        if ((first & 0xE0) == 0xC0 && i + 1 < text.size()) { codepoint = ((first & 0x1F) << 6) | (static_cast<unsigned char>(text[i + 1]) & 0x3F); length = 2; }
-        else if ((first & 0xF0) == 0xE0 && i + 2 < text.size()) { codepoint = ((first & 0x0F) << 12) | ((static_cast<unsigned char>(text[i + 1]) & 0x3F) << 6) | (static_cast<unsigned char>(text[i + 2]) & 0x3F); length = 3; }
-        else if ((first & 0xF8) == 0xF0 && i + 3 < text.size()) { codepoint = ((first & 0x07) << 18) | ((static_cast<unsigned char>(text[i + 1]) & 0x3F) << 12) | ((static_cast<unsigned char>(text[i + 2]) & 0x3F) << 6) | (static_cast<unsigned char>(text[i + 3]) & 0x3F); length = 4; }
-        result.push_back(codepoint);
-        i += length;
-    }
-    return result;
-}
+#include "../Utf8.h"
 
 size_t split(const std::u32string& txt, std::vector<std::u32string>& strs, char32_t ch)
 {
@@ -186,7 +170,7 @@ glm::vec2 Font::RenderText(const std::string& text, glm::vec2 position, float sc
 
     const glm::vec2 startPos(position.x, position.y);
     glm::vec2 textSize(0.0f);
-    const std::u32string unicodeText = DecodeUtf8(text);
+    const std::u32string unicodeText = Utf8::Decode(text);
     std::vector<glm::vec2> characterPositions(unicodeText.length());
     for (size_t i = 0; i < unicodeText.length(); i++)
     {
@@ -229,7 +213,7 @@ glm::vec2 Font::AddTextToBatch(const std::string& text, glm::vec2 position, floa
     glm::vec2 itPosition(position);
     const glm::vec2 startPosition(position);
     glm::vec2 textSize(0.0f);
-    const std::u32string unicodeText = DecodeUtf8(text);
+    const std::u32string unicodeText = Utf8::Decode(text);
     for (uint32_t character : unicodeText)
         GetCharacter(character);
 
@@ -282,33 +266,61 @@ void Font::RenderBatch()
     m_Shader.SetUniform("u_ProjectionMatrix", *m_ProjectionMatrix);
     m_Shader.SetUniform("u_ViewMatrix", *m_ViewMatrix);
 
+    constexpr size_t MaxGlyphsPerBatch = 300;
     for (auto& entry : m_CharsToRender)
     {
         std::vector<Text>& texts = entry.second;
         const Character& ch = GetCharacter(entry.first);
-        m_CharMesh.Clear();
-        for (const Text& text : texts)
+        std::vector<bool> rendered(texts.size(), false);
+        for (size_t groupStart = 0; groupStart < texts.size(); ++groupStart)
         {
-            const float w = ch.Size.x * text.scale;
-            const float h = ch.Size.y * text.scale;
-            glm::vec3 vertexPositions[4];
-            BasicVertices::Quad::ConstructFromBottomleft(vertexPositions, text.position, w, h);
-            for (int i = 0; i < 4; i++)
+            if (rendered[groupStart])
+                continue;
+            const glm::vec3 color = texts[groupStart].color;
+            size_t added = 0;
+            for (size_t textIndex = groupStart; textIndex < texts.size(); ++textIndex)
             {
-                TextureVertex vertex;
-                vertex.position = vertexPositions[i];
-                vertex.textureCoord = textureCoords[i];
-                m_CharMesh.AddVertex(vertex);
+                if (rendered[textIndex] || texts[textIndex].color != color)
+                    continue;
+                if (added == MaxGlyphsPerBatch)
+                {
+                    glBindTexture(GL_TEXTURE_2D, ch.TextureID);
+                    m_Shader.SetUniform("u_ModelMatrix", glm::mat4(1.0f));
+                    m_Shader.SetUniform("u_Size", glm::vec2(1.0f));
+                    m_Shader.SetUniform("textColor", color);
+                    m_CharMesh.Update();
+                    m_CharMesh.Render();
+                    m_CharMesh.Clear();
+                    added = 0;
+                }
+                const Text& text = texts[textIndex];
+                const float w = ch.Size.x * text.scale;
+                const float h = ch.Size.y * text.scale;
+                glm::vec3 vertexPositions[4];
+                BasicVertices::Quad::ConstructFromBottomleft(vertexPositions, text.position, w, h);
+                for (int i = 0; i < 4; ++i)
+                {
+                    TextureVertex vertex;
+                    vertex.position = vertexPositions[i];
+                    vertex.textureCoord = textureCoords[i];
+                    m_CharMesh.AddVertex(vertex);
+                }
+                for (int i = 0; i < 6; ++i)
+                    m_CharMesh.AddIndex(BasicVertices::Quad::Indices[i] + m_CharMesh.GetVertices().size() - 4);
+                rendered[textIndex] = true;
+                ++added;
             }
-            for (int i = 0; i < 6; i++)
-                m_CharMesh.AddIndex(BasicVertices::Quad::Indices[i] + m_CharMesh.GetVertices().size() - 4);
+            if (added != 0)
+            {
+                glBindTexture(GL_TEXTURE_2D, ch.TextureID);
+                m_Shader.SetUniform("u_ModelMatrix", glm::mat4(1.0f));
+                m_Shader.SetUniform("u_Size", glm::vec2(1.0f));
+                m_Shader.SetUniform("textColor", color);
+                m_CharMesh.Update();
+                m_CharMesh.Render();
+                m_CharMesh.Clear();
+            }
         }
-        glBindTexture(GL_TEXTURE_2D, ch.TextureID);
-        m_Shader.SetUniform("u_ModelMatrix", glm::mat4(1.0f));
-        m_Shader.SetUniform("u_Size", glm::vec2(1.0f));
-        m_Shader.SetUniform("textColor", texts[0].color);
-        m_CharMesh.Update();
-        m_CharMesh.Render();
     }
     m_CharsToRender.clear();
     m_Shader.Unbind();
