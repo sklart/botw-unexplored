@@ -40,15 +40,15 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
        ", Choose profile (instead of automatic): " + std::string(chooseProfile ? "true" : "false"));
 
     // Try to mount the save directory
-    int mountStatus = MountSavefile(chooseProfile);
+    const SaveLoadDecision::MountStatus mountStatus = MountSavefile(chooseProfile);
 
     Map::m_GameRunningDialog->SetOpen(false);
     Map::m_MasterModeDialog->SetOpen(false);
     Map::m_NoSavefileDialog->SetOpen(false);
 
-    Log("Mount status:", mountStatus);
+    Log("Mount status:", static_cast<int>(mountStatus));
 
-    if (mountStatus == 1)
+    if (mountStatus == SaveLoadDecision::MountStatus::Success)
     {
         SaveMountGuard mountGuard(true);
         if (loadMasterMode)
@@ -87,12 +87,12 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
         return outcome.success;
     }
     // Failed to mount it. Can happen if no profile was choosen, or some other account thing went wrong 
-    if (mountStatus == 0) {  // No save for profile
+    if (mountStatus == SaveLoadDecision::MountStatus::Cancelled) {
         Log("Canceled profile picker");
 
         return false;
     }
-    if (mountStatus == -1) { // Game is running
+    if (mountStatus == SaveLoadDecision::MountStatus::SaveInaccessible) {
         Log("Game is running. Loading backup...");
 
         const bool loadedBackupSuccess = LoadBackup(loadMasterMode);
@@ -110,7 +110,7 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
         MasterModeFileLoaded = outcome.masterModeLoaded;
         return outcome.success;
     }
-    if (mountStatus == -2) { // User has no save data
+    if (mountStatus == SaveLoadDecision::MountStatus::NoSave) {
         Log("The selected user has no save data");
 
         MasterModeFileLoaded = false;
@@ -119,6 +119,7 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
         return false;
     }
 
+    Log("Unable to access account or profile picker");
     return false;
 }
 
@@ -130,12 +131,12 @@ uint32_t SavefileIO::ReadU32(const uint8_t* buffer, size_t offset)
            (static_cast<uint32_t>(buffer[offset + 3]) << 24);
 }
 
-int SavefileIO::MountSavefile(bool openProfilePicker)
+SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker)
 {
     if (saveMounted)
     {
         Log("Refusing to mount an already mounted save");
-        return -2;
+        return SaveLoadDecision::MountStatus::AccountError;
     }
 
     Result rc = 0;
@@ -147,7 +148,14 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
     LoadedSavefile = false;
 
     if (openProfilePicker)
-        uid = Accounts::RequestProfileSelection();
+    {
+        const Accounts::ProfileSelection selection = Accounts::RequestProfileSelection();
+        if (selection.status == Accounts::ProfileSelectionStatus::Cancelled)
+            return SaveLoadDecision::MountStatus::Cancelled;
+        if (selection.status != Accounts::ProfileSelectionStatus::Selected)
+            return SaveLoadDecision::MountStatus::AccountError;
+        uid = selection.uid;
+    }
     else
     {
         // Use cached values
@@ -162,7 +170,7 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
                 Log("Failed to mount save (cached user)");
                 GameIsRunning = true;
 
-                return -1;
+                return SaveLoadDecision::MountStatus::SaveInaccessible;
             }
             saveMounted = true;
 
@@ -176,10 +184,10 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
             {
                 Log("No normal mode file exists (cached user)");
                 UnmountSavefile();
-                return -2;
+                return SaveLoadDecision::MountStatus::NoSave;
             }
 
-            return 1;
+            return SaveLoadDecision::MountStatus::Success;
         } else {
             Log("No cached profile available");
         }
@@ -190,6 +198,7 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
     const bool accountServiceInitialized = R_SUCCEEDED(rc);
     if (R_FAILED(rc)) {
         Log("accountInitialize() failed");
+        return SaveLoadDecision::MountStatus::AccountError;
     }
 
     // If the manual profile selection wasn't choosen 
@@ -224,8 +233,18 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
         if (!couldGetUserAutomatically) 
         {
             Log("Opening profile picker");
-
-            uid = Accounts::RequestProfileSelection();
+            const Accounts::ProfileSelection selection = Accounts::RequestProfileSelection();
+            if (selection.status == Accounts::ProfileSelectionStatus::Cancelled)
+            {
+                accountExit();
+                return SaveLoadDecision::MountStatus::Cancelled;
+            }
+            if (selection.status != Accounts::ProfileSelectionStatus::Selected)
+            {
+                accountExit();
+                return SaveLoadDecision::MountStatus::AccountError;
+            }
+            uid = selection.uid;
         }
     }
 
@@ -239,7 +258,7 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
     if (!accountUidIsValid(&uid))
     {
         Log("Invalid account uid. The user canceled the profile picker");
-        return -2;
+        return SaveLoadDecision::MountStatus::Cancelled;
     } else {
         Log("Valid account uid from whatever profile selection method");
     }
@@ -249,16 +268,21 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
     s64 total_entries = 0;
 
     bool hasBotwSavedata = false;
+    bool readerFailed = false;
 
     Result res = fsOpenSaveDataInfoReader(&reader, FsSaveDataSpaceId_User);
     if (R_FAILED(res)) {
         Log("fsOpenSaveDataInfoReader() failed");
-        return -2;
+        return SaveLoadDecision::MountStatus::AccountError;
     }
 
     while (true) {
         res = fsSaveDataInfoReaderRead(&reader, &info, 1, &total_entries);
-        if (R_FAILED(res) || total_entries == 0) {
+        if (R_FAILED(res)) {
+            readerFailed = true;
+            break;
+        }
+        if (total_entries == 0) {
             break;
         }
 
@@ -275,11 +299,17 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
 
     fsSaveDataInfoReaderClose(&reader);
 
+    if (readerFailed)
+    {
+        Log("fsSaveDataInfoReaderRead() failed");
+        return SaveLoadDecision::MountStatus::AccountError;
+    }
+
     if (!hasBotwSavedata)
     {
         Log("User has no botw save data");
         NoSavefileForUser = true;
-        return -2;
+        return SaveLoadDecision::MountStatus::NoSave;
     }
 
     rc = fsdevMountSaveDataReadOnly("save", botwId, uid);
@@ -288,7 +318,7 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
         Log("Botw is running. Failed to mount save (or fsdevMountSaveDataReadOnly() failed, who knows)");
         GameIsRunning = true;
 
-        return -1;
+        return SaveLoadDecision::MountStatus::SaveInaccessible;
     }
     saveMounted = true;
 
@@ -300,10 +330,10 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
     {
         Log("No savefile exists, even though savedata exists");
         UnmountSavefile();
-        return -2;
+        return SaveLoadDecision::MountStatus::NoSave;
     }
 
-    return 1;
+    return SaveLoadDecision::MountStatus::Success;
 }
 
 bool SavefileIO::UnmountSavefile()

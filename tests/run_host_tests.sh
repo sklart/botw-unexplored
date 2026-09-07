@@ -9,6 +9,8 @@ fi
 /tmp/test_settings
 "$compiler" -std=c++14 -Wall -Wextra -pedantic "${sanitizers[@]}" -Isource tests/test_manual_progress.cpp source/ManualProgress.cpp -o /tmp/test_manual_progress
 /tmp/test_manual_progress
+"$compiler" -std=c++14 -Wall -Wextra -pedantic "${sanitizers[@]}" -Isource tests/test_legacy_korok_migration.cpp source/LegacyKorokMigration.cpp -o /tmp/test_legacy_korok_migration
+/tmp/test_legacy_korok_migration
 "$compiler" -std=c++14 -Wall -Wextra -pedantic "${sanitizers[@]}" -Isource tests/test_object_model.cpp source/ObjectModel.cpp -o /tmp/test_object_model
 /tmp/test_object_model
 "$compiler" -std=c++14 -Wall -Wextra -pedantic "${sanitizers[@]}" -Isource tests/test_save_load_decision.cpp source/SaveLoadDecision.cpp -o /tmp/test_save_load_decision

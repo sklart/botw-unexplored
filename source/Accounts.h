@@ -2,9 +2,19 @@
 
 #include <string>
 
+#include "SaveLoadDecision.h"
+
 namespace Accounts
 {
-    AccountUid RequestProfileSelection();
+    using ProfileSelectionStatus = SaveLoadDecision::ProfilePickerStatus;
+
+    struct ProfileSelection
+    {
+        ProfileSelectionStatus status = ProfileSelectionStatus::Error;
+        AccountUid uid = {};
+    };
+
+    ProfileSelection RequestProfileSelection();
 
     std::string GetNickname(AccountUid uid);
 }

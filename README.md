@@ -2,7 +2,7 @@
 
 BotW Unexplored is a Nintendo Switch homebrew map companion for *The Legend of Zelda: Breath of the Wild*. It reads the selected local save (or a previously created backup while the game is running) and shows collectible progress directly on the console.
 
-This repository is the maintained fork of [lud99/botw-unexplored](https://github.com/lud99/botw-unexplored). The current fork release is **v2.2.1**.
+This repository is the maintained fork of [lud99/botw-unexplored](https://github.com/lud99/botw-unexplored). The current fork release is **v2.2.2**.
 
 [Русская версия документации](docs/README.ru.md)
 

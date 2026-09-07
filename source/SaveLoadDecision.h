@@ -2,6 +2,22 @@
 
 namespace SaveLoadDecision
 {
+    enum class MountStatus
+    {
+        Success = 1,
+        Cancelled = 0,
+        SaveInaccessible = -1,
+        NoSave = -2,
+        AccountError = -3
+    };
+
+    enum class ProfilePickerStatus
+    {
+        Selected,
+        Cancelled,
+        Error
+    };
+
     struct Outcome
     {
         bool success = false;
@@ -10,5 +26,6 @@ namespace SaveLoadDecision
         bool showGameRunningDialog = false;
     };
 
-    Outcome Resolve(int mountStatus, bool requestedMasterMode, bool parseSucceeded);
+    Outcome Resolve(MountStatus mountStatus, bool requestedMasterMode, bool parseSucceeded);
+    ProfilePickerStatus ResolveProfilePicker(bool transportSucceeded, unsigned long long appletResult, bool validUid);
 }

@@ -22,6 +22,12 @@ namespace ManualProgress
         uint32_t completionHash = 0;
     };
 
+    struct State
+    {
+        std::vector<Entry> entries;
+        bool dirty = false;
+    };
+
     enum class LoadResult
     {
         Current,
@@ -38,5 +44,7 @@ namespace ManualProgress
     bool IsDirty();
     bool CanPersist();
     bool Flush();
+    State CaptureState();
+    void RestoreState(const State& state);
     const std::vector<Entry>& Entries();
 }

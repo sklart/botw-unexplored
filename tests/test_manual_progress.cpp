@@ -24,11 +24,22 @@ int main()
     ManualProgress::Clear();
     assert(ManualProgress::Load(file) == ManualProgress::LoadResult::Current);
     assert(ManualProgress::Entries().size() == 2);
+    const size_t validEntryCount = ManualProgress::Entries().size();
+    std::stringstream truncated("BOTW_UNEXPLORED_MANUAL_PROGRESS\n1\n1 2 0 0\n");
+    assert(ManualProgress::Load(truncated) == ManualProgress::LoadResult::Invalid);
+    assert(ManualProgress::Entries().size() == validEntryCount);
+    std::stringstream garbage("BOTW_UNEXPLORED_MANUAL_PROGRESS\n1\n1 2 0 0 100 trailing\n");
+    assert(ManualProgress::Load(garbage) == ManualProgress::LoadResult::Invalid);
+    assert(ManualProgress::Entries().size() == validEntryCount);
+    std::stringstream malformedMiddle("BOTW_UNEXPLORED_MANUAL_PROGRESS\n1\n1 2 0 0 100\ninvalid line\n3 4 1 1 200\n");
+    assert(ManualProgress::Load(malformedMiddle) == ManualProgress::LoadResult::Invalid);
+    assert(ManualProgress::Entries().size() == validEntryCount);
     std::stringstream invalid("BOTW_UNEXPLORED_MANUAL_PROGRESS\n99\n");
     assert(ManualProgress::Load(invalid) == ManualProgress::LoadResult::FutureVersion);
     assert(!ManualProgress::CanPersist());
     assert(!ManualProgress::MarkFound(normal, Data::ObjectType::Korok, 300));
-    std::stringstream malformed("not a manual-progress file\n");
-    assert(ManualProgress::Load(malformed) == ManualProgress::LoadResult::Invalid);
+    file.clear();
+    file.seekg(0);
+    assert(ManualProgress::Load(file) == ManualProgress::LoadResult::Current);
     assert(ManualProgress::CanPersist());
 }

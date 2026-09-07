@@ -22,41 +22,79 @@ namespace
         return entry.context.profileId1 == context.profileId1 && entry.context.profileId2 == context.profileId2 &&
                entry.context.masterMode == context.masterMode && entry.type == type && entry.completionHash == hash;
     }
+
+    bool ParseVersion(const std::string& line, int& version)
+    {
+        std::istringstream parser(line);
+        return static_cast<bool>(parser >> version) && (parser >> std::ws).eof();
+    }
+
+    bool ParseEntry(const std::string& line, ManualProgress::Entry& entry)
+    {
+        std::istringstream parser(line);
+        int master = 0;
+        int type = 0;
+        if (!(parser >> entry.context.profileId1 >> entry.context.profileId2 >> master >> type >> entry.completionHash) ||
+            !(parser >> std::ws).eof() || (master != 0 && master != 1) ||
+            type < 0 || type >= static_cast<int>(Data::ObjectType::Count))
+            return false;
+        entry.context.masterMode = master != 0;
+        entry.type = static_cast<Data::ObjectType>(type);
+        return true;
+    }
+
+    void RemoveCarriageReturn(std::string& line)
+    {
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
+    }
 }
 
 ManualProgress::LoadResult ManualProgress::Load(std::istream& input)
 {
-    entries.clear();
+    std::string header;
+    if (!std::getline(input, header))
+        return LoadResult::Invalid;
+    RemoveCarriageReturn(header);
+    if (header != Header)
+        return LoadResult::Invalid;
+
+    std::string versionLine;
+    int version = 0;
+    if (!std::getline(input, versionLine))
+        return LoadResult::Invalid;
+    RemoveCarriageReturn(versionLine);
+    if (!ParseVersion(versionLine, version))
+        return LoadResult::Invalid;
+    if (version > Version)
+    {
+        preserveFutureFile = true;
+        return LoadResult::FutureVersion;
+    }
+    if (version != Version)
+        return LoadResult::Invalid;
+
+    std::vector<Entry> parsedEntries;
+    std::string line;
+    while (std::getline(input, line))
+    {
+        RemoveCarriageReturn(line);
+        Entry entry;
+        if (!ParseEntry(line, entry))
+            return LoadResult::Invalid;
+        if (std::find_if(parsedEntries.begin(), parsedEntries.end(), [&](const Entry& existing)
+        {
+            return SameKey(existing, entry.context, entry.type, entry.completionHash);
+        }) == parsedEntries.end())
+            parsedEntries.push_back(entry);
+    }
+    if (!input.eof())
+        return LoadResult::Invalid;
+
+    entries = std::move(parsedEntries);
     dirty = false;
     preserveFutureFile = false;
-    std::string header;
-    int version = 0;
-    if (!std::getline(input, header) || header != Header || !(input >> version) || version != Version)
-    {
-        if (header == Header && version > Version)
-        {
-            preserveFutureFile = true;
-            return LoadResult::FutureVersion;
-        }
-        return LoadResult::Invalid;
-    }
-
-    Entry entry;
-    int master = 0;
-    int type = 0;
-    while (input >> entry.context.profileId1 >> entry.context.profileId2 >> master >> type >> entry.completionHash)
-    {
-        if ((master != 0 && master != 1) || type < 0 || type >= static_cast<int>(Data::ObjectType::Count))
-        {
-            entries.clear();
-            return LoadResult::Invalid;
-        }
-        entry.context.masterMode = master != 0;
-        entry.type = static_cast<Data::ObjectType>(type);
-        if (!IsMarkedFound(entry.context, entry.type, entry.completionHash))
-            entries.push_back(entry);
-    }
-    return input.eof() ? LoadResult::Current : LoadResult::Invalid;
+    return LoadResult::Current;
 }
 
 bool ManualProgress::Save(std::ostream& output)
@@ -130,6 +168,20 @@ bool ManualProgress::Flush()
         return false;
     dirty = false;
     return true;
+}
+
+ManualProgress::State ManualProgress::CaptureState()
+{
+    State state;
+    state.entries = entries;
+    state.dirty = dirty;
+    return state;
+}
+
+void ManualProgress::RestoreState(const State& state)
+{
+    entries = state.entries;
+    dirty = state.dirty;
 }
 
 const std::vector<ManualProgress::Entry>& ManualProgress::Entries()

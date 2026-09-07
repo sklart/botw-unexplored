@@ -25,6 +25,7 @@
 #include "MapObject.hpp"
 #include "Settings.h"
 #include "ManualProgress.h"
+#include "LegacyKorokMigration.h"
 
 bool openGLInitialized = false;
 bool romfsInitialized = false;
@@ -71,29 +72,45 @@ static void MigrateLegacyKorokProgress()
     if (!legacyFile.is_open())
         return;
 
+    std::vector<bool> legacyFound;
+    if (!LegacyKorokMigration::Parse(legacyFile, Data::KoroksCount, legacyFound))
+    {
+        Log("Ignoring malformed legacy Korok progress file");
+        return;
+    }
+
     const ManualProgress::Context context = {SavefileIO::AccountUid1, SavefileIO::AccountUid2, Map::m_LoadMasterMode};
-    std::string value;
+    const ManualProgress::State previousState = ManualProgress::CaptureState();
     for (int i = 0; i < Data::KoroksCount; ++i)
     {
-        if (!std::getline(legacyFile, value) || (value != "0" && value != "1"))
+        if (!legacyFound[i])
+            continue;
+        if (!ManualProgress::IsMarkedFound(context, Data::ObjectType::Korok, Data::Koroks[i].hash) &&
+            !ManualProgress::MarkFound(context, Data::ObjectType::Korok, Data::Koroks[i].hash))
         {
-            Log("Ignoring malformed legacy Korok progress file");
+            ManualProgress::RestoreState(previousState);
+            Log("Failed to prepare legacy Korok progress migration");
             return;
-        }
-        if (value == "1")
-        {
-            Map::m_Koroks[i].m_Found = true;
-            ManualProgress::MarkFound(context, Data::ObjectType::Korok, Data::Koroks[i].hash);
         }
     }
 
-    if (SaveManualProgress())
+    if (!SaveManualProgress())
     {
-        std::remove("sdmc:/switch/botw-unexplored/koroks.txt");
+        ManualProgress::RestoreState(previousState);
+        Log("Failed to migrate legacy Korok progress");
+        return;
+    }
+
+    for (int i = 0; i < Data::KoroksCount; ++i)
+        if (legacyFound[i])
+            Map::m_Koroks[i].m_Found = true;
+
+    if (std::remove("sdmc:/switch/botw-unexplored/koroks.txt") == 0)
+    {
         Log("Migrated legacy Korok progress");
     }
     else
-        Log("Failed to migrate legacy Korok progress");
+        Log("Migrated legacy Korok progress but could not remove legacy file");
 }
 
 static void ApplySettings(const SettingsIO::Settings& settings)

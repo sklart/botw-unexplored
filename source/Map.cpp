@@ -34,15 +34,14 @@ namespace
         return context;
     }
 
-    bool ResolveFound(Data::ObjectType type, uint32_t hash, bool foundInSave)
+    bool ResolveFound(Data::ObjectType type, uint32_t hash, bool foundInSave, bool& manualProgressChanged)
     {
         const ManualProgress::Context context = CurrentProgressContext();
         if (foundInSave)
         {
             if (!SavefileIO::GameIsRunning)
             {
-                if (ManualProgress::ConfirmFromSave(context, type, hash))
-                    ManualProgress::Flush();
+                manualProgressChanged = ManualProgress::ConfirmFromSave(context, type, hash) || manualProgressChanged;
             }
             return true;
         }
@@ -124,6 +123,8 @@ void Map::UpdateMapObjects()
     if (!SavefileIO::LoadedSavefile)
         return;
 
+    bool manualProgressChanged = false;
+
     for (int i = 0; i < Data::KoroksCount; i++) // Korok
     {
         m_Koroks[i].m_Position = glm::vec2(Data::Koroks[i].x, -Data::Koroks[i].y) * MapScale;
@@ -135,7 +136,7 @@ void Map::UpdateMapObjects()
             SavefileIO::foundKoroks.begin(),
             SavefileIO::foundKoroks.end(),
             &Data::Koroks[i]) != SavefileIO::foundKoroks.end();
-        m_Koroks[i].m_Found = ResolveFound(Data::ObjectType::Korok, Data::Koroks[i].hash, foundInSave);
+        m_Koroks[i].m_Found = ResolveFound(Data::ObjectType::Korok, Data::Koroks[i].hash, foundInSave, manualProgressChanged);
     }
 
     for (int i = 0; i < Data::ShrineCount; i++) // Shrine
@@ -147,7 +148,7 @@ void Map::UpdateMapObjects()
             SavefileIO::foundShrines.begin(),
             SavefileIO::foundShrines.end(),
             &Data::Shrines[i]) != SavefileIO::foundShrines.end();
-        m_Shrines[i].m_Found = ResolveFound(Data::ObjectType::Shrine, Data::Shrines[i].hash, foundInSave);
+        m_Shrines[i].m_Found = ResolveFound(Data::ObjectType::Shrine, Data::Shrines[i].hash, foundInSave, manualProgressChanged);
     }
 
     for (int i = 0; i < Data::DLCShrineCount; i++) // DLC Shrine
@@ -159,7 +160,7 @@ void Map::UpdateMapObjects()
             SavefileIO::foundDLCShrines.begin(),
             SavefileIO::foundDLCShrines.end(),
             &Data::DLCShrines[i]) != SavefileIO::foundDLCShrines.end();
-        m_DLCShrines[i].m_Found = ResolveFound(Data::ObjectType::DLCShrine, Data::DLCShrines[i].hash, foundInSave);
+        m_DLCShrines[i].m_Found = ResolveFound(Data::ObjectType::DLCShrine, Data::DLCShrines[i].hash, foundInSave, manualProgressChanged);
     }
 
     for (int i = 0; i < Data::HinoxesCount; i++) // Hinox
@@ -171,7 +172,7 @@ void Map::UpdateMapObjects()
             SavefileIO::defeatedHinoxes.begin(),
             SavefileIO::defeatedHinoxes.end(),
             &Data::Hinoxes[i]) != SavefileIO::defeatedHinoxes.end();
-        m_Hinoxes[i].m_Found = ResolveFound(Data::ObjectType::Hinox, Data::Hinoxes[i].hash, foundInSave);
+        m_Hinoxes[i].m_Found = ResolveFound(Data::ObjectType::Hinox, Data::Hinoxes[i].hash, foundInSave, manualProgressChanged);
     }
 
     for (int i = 0; i < Data::TalusesCount; i++) // Talus
@@ -183,7 +184,7 @@ void Map::UpdateMapObjects()
             SavefileIO::defeatedTaluses.begin(),
             SavefileIO::defeatedTaluses.end(),
             &Data::Taluses[i]) != SavefileIO::defeatedTaluses.end();
-        m_Taluses[i].m_Found = ResolveFound(Data::ObjectType::Talus, Data::Taluses[i].hash, foundInSave);
+        m_Taluses[i].m_Found = ResolveFound(Data::ObjectType::Talus, Data::Taluses[i].hash, foundInSave, manualProgressChanged);
     }
 
     for (int i = 0; i < Data::MoldugasCount; i++) // Molduga
@@ -195,7 +196,7 @@ void Map::UpdateMapObjects()
             SavefileIO::defeatedMoldugas.begin(),
             SavefileIO::defeatedMoldugas.end(),
             &Data::Moldugas[i]) != SavefileIO::defeatedMoldugas.end();
-        m_Moldugas[i].m_Found = ResolveFound(Data::ObjectType::Molduga, Data::Moldugas[i].hash, foundInSave);
+        m_Moldugas[i].m_Found = ResolveFound(Data::ObjectType::Molduga, Data::Moldugas[i].hash, foundInSave, manualProgressChanged);
     }
 
     for (int i = 0; i < Data::LocationsCount; i++) // Locations
@@ -208,8 +209,11 @@ void Map::UpdateMapObjects()
             SavefileIO::visitedLocations.begin(),
             SavefileIO::visitedLocations.end(),
             &Data::Locations[i]) != SavefileIO::visitedLocations.end();
-        m_Locations[i].m_Found = ResolveFound(Data::ObjectType::Location, Data::Locations[i].hash, foundInSave);
+        m_Locations[i].m_Found = ResolveFound(Data::ObjectType::Location, Data::Locations[i].hash, foundInSave, manualProgressChanged);
     }
+
+    if (manualProgressChanged)
+        ManualProgress::Flush();
 
     Log("Updated map objects");
 }
@@ -298,7 +302,7 @@ void Map::Update()
     {
         if (m_KorokDialog->m_IsOpen)
         {
-            if (SavefileIO::GameIsRunning && m_KorokDialog->m_KorokIndex >= 0 &&
+            if (SavefileIO::GameIsRunning && ManualProgress::CanPersist() && m_KorokDialog->m_KorokIndex >= 0 &&
                 !m_Koroks[m_KorokDialog->m_KorokIndex].m_Found)
             {
                 m_Koroks[m_KorokDialog->m_KorokIndex].m_Found = true;
@@ -703,7 +707,8 @@ void Map::OpenNearestObject(const glm::vec2& mapPosition)
 
 void Map::MarkSelectedObjectFound()
 {
-    if (!m_ObjectInfo->m_IsOpen || m_ObjectInfo->m_Found == nullptr || *m_ObjectInfo->m_Found || !SavefileIO::GameIsRunning)
+    if (!m_ObjectInfo->m_IsOpen || m_ObjectInfo->m_Found == nullptr || *m_ObjectInfo->m_Found ||
+        !SavefileIO::GameIsRunning || !ManualProgress::CanPersist())
         return;
     *m_ObjectInfo->m_Found = true;
     if (ManualProgress::MarkFound(CurrentProgressContext(), m_ObjectInfo->m_Type, m_ObjectInfo->m_CompletionHash))
@@ -712,30 +717,30 @@ void Map::MarkSelectedObjectFound()
 
 void Map::FocusNextMissing()
 {
-    glm::vec2 closest;
-    float bestDistanceSquared = 1e30f;
-    const auto consider = [&](const glm::vec2& position, bool found)
+    std::vector<Navigation::Candidate> candidates;
+    const auto add = [&](const glm::vec2& position, bool visible, bool found)
     {
-        if (found)
-            return;
-        const float distanceSquared = glm::dot(position - m_CameraPosition, position - m_CameraPosition);
-        if (distanceSquared < bestDistanceSquared)
-        {
-            bestDistanceSquared = distanceSquared;
-            closest = position;
-        }
+        candidates.push_back({{position.x, position.y}, visible, found});
     };
-    if (m_Legend->m_Show[IconButton::Koroks]) for (int i = 0; i < Data::KoroksCount; ++i) consider(m_Koroks[i].m_Position, m_Koroks[i].m_Found);
-    if (m_Legend->m_Show[IconButton::Shrines]) for (int i = 0; i < Data::ShrineCount; ++i) consider(m_Shrines[i].m_Position, m_Shrines[i].m_Found);
-    if (m_Legend->m_Show[IconButton::Shrines] && SavefileIO::HasDLC) for (int i = 0; i < Data::DLCShrineCount; ++i) consider(m_DLCShrines[i].m_Position, m_DLCShrines[i].m_Found);
-    if (m_Legend->m_Show[IconButton::Hinoxes]) for (int i = 0; i < Data::HinoxesCount; ++i) consider(m_Hinoxes[i].m_Position, m_Hinoxes[i].m_Found);
-    if (m_Legend->m_Show[IconButton::Taluses]) for (int i = 0; i < Data::TalusesCount; ++i) consider(m_Taluses[i].m_Position, m_Taluses[i].m_Found);
-    if (m_Legend->m_Show[IconButton::Moldugas]) for (int i = 0; i < Data::MoldugasCount; ++i) consider(m_Moldugas[i].m_Position, m_Moldugas[i].m_Found);
-    if (m_Legend->m_Show[IconButton::Locations]) for (int i = 0; i < Data::LocationsCount; ++i) consider(m_Locations[i].m_Position, m_Locations[i].m_Found);
-    if (bestDistanceSquared < 1e30f)
+    const bool showKoroks = m_Legend->m_Show[IconButton::Koroks];
+    const bool showShrines = m_Legend->m_Show[IconButton::Shrines];
+    const bool showHinoxes = m_Legend->m_Show[IconButton::Hinoxes];
+    const bool showTaluses = m_Legend->m_Show[IconButton::Taluses];
+    const bool showMoldugas = m_Legend->m_Show[IconButton::Moldugas];
+    const bool showLocations = m_Legend->m_Show[IconButton::Locations];
+    for (int i = 0; i < Data::KoroksCount; ++i) add(m_Koroks[i].m_Position, showKoroks, m_Koroks[i].m_Found);
+    for (int i = 0; i < Data::ShrineCount; ++i) add(m_Shrines[i].m_Position, showShrines, m_Shrines[i].m_Found);
+    for (int i = 0; i < Data::DLCShrineCount; ++i) add(m_DLCShrines[i].m_Position, showShrines && SavefileIO::HasDLC, m_DLCShrines[i].m_Found);
+    for (int i = 0; i < Data::HinoxesCount; ++i) add(m_Hinoxes[i].m_Position, showHinoxes, m_Hinoxes[i].m_Found);
+    for (int i = 0; i < Data::TalusesCount; ++i) add(m_Taluses[i].m_Position, showTaluses, m_Taluses[i].m_Found);
+    for (int i = 0; i < Data::MoldugasCount; ++i) add(m_Moldugas[i].m_Position, showMoldugas, m_Moldugas[i].m_Found);
+    for (int i = 0; i < Data::LocationsCount; ++i) add(m_Locations[i].m_Position, showLocations, m_Locations[i].m_Found);
+
+    Navigation::Point closest;
+    if (Navigation::FindNearest(candidates, {m_CameraPosition.x, m_CameraPosition.y}, true, closest))
     {
-        m_TargetCameraPosition = closest;
-        m_CursorPosition = closest;
+        m_TargetCameraPosition = glm::vec2(closest.x, closest.y);
+        m_CursorPosition = m_TargetCameraPosition;
         m_HasTargetCameraPosition = true;
         m_CursorFollowsTarget = true;
     }

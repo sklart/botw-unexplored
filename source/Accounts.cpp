@@ -4,76 +4,93 @@
 #include <stdio.h>
 #include "Log.h"
 
-AccountUid Accounts::RequestProfileSelection()
+Accounts::ProfileSelection Accounts::RequestProfileSelection()
 {
-    // AccountUid out_id;
-    // LibAppletArgs args;
-    // libappletArgsCreate(&args, 0x10000);
-    // u8 st_in[0xA0]  = {0};
-    // u8 st_out[0x18] = {0};
-    // size_t repsz;
-
-    // Result res = libappletLaunch(AppletId_LibraryAppletPlayerSelect, &args, st_in, 0xA0, st_out, 0x18, &repsz);
-    // if (R_SUCCEEDED(res)) {
-    //     u64 lres       = *(u64*)st_out;
-    //     AccountUid uid = *(AccountUid*)&st_out[8];
-    //     if (lres == 0)
-    //         out_id = uid;
-    // } else {
-    //     printf("libappletLaunch() failed\n");
-    // }
-
     Log("Requesting profile picker...");
 
-    // return out_id;
-    struct UserReturnData{
+    struct UserReturnData
+    {
         u64 result;
         AccountUid UID;
     };
 
-    struct UserReturnData outdata;
-
-    AppletHolder aph;
-    AppletStorage ast;
-    AppletStorage hast1;
-    LibAppletArgs args;
-
-    Result res;
+    ProfileSelection selection;
+    UserReturnData outdata = {};
+    AppletHolder holder = {};
+    AppletStorage outputStorage = {};
+    AppletStorage inputStorage = {};
+    LibAppletArgs args = {};
+    bool holderCreated = false;
+    bool inputStorageCreated = false;
+    bool outputStorageCreated = false;
 
     u8 indata[0xA0] = { 0 };
     indata[0x96] = 1;
 
-    res = appletCreateLibraryApplet(&aph, AppletId_LibraryAppletPlayerSelect, LibAppletMode_AllForeground);
-    if (R_FAILED(res)) Log("appletCreateLibraryApplet() failed\n");
+    Result res = appletCreateLibraryApplet(&holder, AppletId_LibraryAppletPlayerSelect, LibAppletMode_AllForeground);
+    if (R_FAILED(res))
+    {
+        Log("appletCreateLibraryApplet() failed");
+        return selection;
+    }
+    holderCreated = true;
     libappletArgsCreate(&args, 0);
-    res = libappletArgsPush(&args, &aph);
-    if (R_FAILED(res)) Log("libappletArgsPush() failed\n");
+    res = libappletArgsPush(&args, &holder);
+    if (R_FAILED(res))
+    {
+        Log("libappletArgsPush() failed");
+        appletHolderClose(&holder);
+        return selection;
+    }
 
-    res = appletCreateStorage(&hast1, 0xA0);
-    if (R_FAILED(res)) Log("appletCreateStorage() failed\n");
+    res = appletCreateStorage(&inputStorage, sizeof(indata));
+    if (R_FAILED(res))
+    {
+        Log("appletCreateStorage() failed");
+        appletHolderClose(&holder);
+        return selection;
+    }
+    inputStorageCreated = true;
 
-    res = appletStorageWrite(&hast1, 0, indata, 0xA0);
-    if (R_FAILED(res)) Log("appletStorageWrite() failed\n");
-    res = appletHolderPushInData(&aph, &hast1);
-    if (R_FAILED(res)) Log("appletHolderPushInData() failed\n");
-    res = appletHolderStart(&aph);
-    if (R_FAILED(res)) Log("appletHolderStart() failed\n");
+    res = appletStorageWrite(&inputStorage, 0, indata, sizeof(indata));
+    if (R_SUCCEEDED(res))
+        res = appletHolderPushInData(&holder, &inputStorage);
+    if (R_SUCCEEDED(res))
+        res = appletHolderStart(&holder);
+    if (R_FAILED(res))
+    {
+        Log("PlayerSelect applet setup failed");
+        appletStorageClose(&inputStorage);
+        appletHolderClose(&holder);
+        return selection;
+    }
 
-    while (appletHolderWaitInteractiveOut(&aph));
+    while (appletHolderWaitInteractiveOut(&holder)) {}
 
-    appletHolderJoin(&aph);
-    res = appletHolderPopOutData(&aph, &ast);
-    if (R_FAILED(res)) Log("appletHolderPopOutData() failed\n");
-    res = appletStorageRead(&ast, 0, &outdata, 24);
-    if (R_FAILED(res)) Log("appletStorageRead() failed\n");
+    appletHolderJoin(&holder);
+    res = appletHolderPopOutData(&holder, &outputStorage);
+    if (R_SUCCEEDED(res))
+    {
+        outputStorageCreated = true;
+        res = appletStorageRead(&outputStorage, 0, &outdata, sizeof(outdata));
+    }
 
-    appletHolderClose(&aph);
-    appletStorageClose(&ast);
-    appletStorageClose(&hast1);
+    if (outputStorageCreated)
+        appletStorageClose(&outputStorage);
+    if (inputStorageCreated)
+        appletStorageClose(&inputStorage);
+    if (holderCreated)
+        appletHolderClose(&holder);
 
-    Log("RequestProfileSelection() success?");
-
-    return outdata.UID;
+    selection.status = SaveLoadDecision::ResolveProfilePicker(R_SUCCEEDED(res), outdata.result,
+                                                               accountUidIsValid(&outdata.UID));
+    if (selection.status != ProfileSelectionStatus::Selected)
+    {
+        Log(selection.status == ProfileSelectionStatus::Cancelled ? "PlayerSelect was cancelled" : "PlayerSelect applet result read failed");
+        return selection;
+    }
+    selection.uid = outdata.UID;
+    return selection;
 }
 
 // doesn't work

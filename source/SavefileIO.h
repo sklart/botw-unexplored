@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vector>
+
+#include "SaveLoadDecision.h"
 #include <cstdint>
 #include <switch.h>
 #include <thread>
@@ -28,7 +30,7 @@ namespace SavefileIO
 
     uint32_t ReadU32(const uint8_t* buffer, size_t offset);
 
-    int MountSavefile(bool openProfilePicker = false);
+    SaveLoadDecision::MountStatus MountSavefile(bool openProfilePicker = false);
     bool UnmountSavefile();
 
     bool LoadBackup(bool masterMode = false);
