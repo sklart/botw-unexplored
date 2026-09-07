@@ -2,9 +2,11 @@
 
 #include "Data.h"
 #include "Map.h"
+#include "MapObject.hpp"
 #include "SavefileIO.h"
 #include "Log.h"
 #include "Localization.h"
+#include "ManualProgress.h"
 
 KorokDialog::KorokDialog()
 {
@@ -48,12 +50,15 @@ void KorokDialog::Render(glm::mat4 projMat, glm::mat4 viewMat)
     Map::m_Font.AddTextToBatch(m_Text, startPos, 0.46f, glm::vec3(1.0f), ALIGN_LEFT, Width - m_Margin * 2);
 
     // Russian action labels are rendered on separate lines to prevent overlap.
-    Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::MarkFound), glm::vec2(Map::m_ScreenLeft + 15, Map::m_ScreenTop - 32.0f), 0.34f, glm::vec3(1.0f), ALIGN_LEFT);
+    if (SavefileIO::GameIsRunning && m_KorokIndex >= 0 && !Map::m_Koroks[m_KorokIndex].m_Found && ManualProgress::CanPersist())
+        Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::MarkFound), glm::vec2(Map::m_ScreenLeft + 15, Map::m_ScreenTop - 32.0f), 0.34f, glm::vec3(1.0f), ALIGN_LEFT);
     Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::Close), glm::vec2(Map::m_ScreenLeft + Width - 20.0f, Map::m_ScreenTop - 62.0f), 0.34f, glm::vec3(1.0f), ALIGN_RIGHT);
 }
 
 void KorokDialog::SetOpen(bool open)
 {
+    if (open)
+        Map::CloseInfoPanels();
     m_IsOpen = open;
 }
 

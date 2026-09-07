@@ -28,8 +28,10 @@ namespace Map
 
     void UpdateMapObjects();
     void OpenNearestObject(const glm::vec2& mapPosition);
+    void CloseInfoPanels();
     void MarkSelectedObjectFound();
     void FocusNextMissing();
+    void ClampCursorToViewport();
 
     void Update();
     void Render();
@@ -73,6 +75,7 @@ namespace Map
     extern glm::vec2 m_CursorPosition;
     extern glm::vec2 m_TargetCameraPosition;
     extern bool m_HasTargetCameraPosition;
+    extern bool m_CursorFollowsTarget;
 
     extern PadState* m_Pad;
 

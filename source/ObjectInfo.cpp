@@ -4,6 +4,8 @@
 #include "Legend.h"
 #include "Map.h"
 #include "ObjectModel.h"
+#include "ManualProgress.h"
+#include "SavefileIO.h"
 
 ObjectInfo::ObjectInfo()
 {
@@ -30,12 +32,14 @@ void ObjectInfo::SetObject(Data::ObjectType type, uint32_t completionHash, const
     {
         m_Icon = new TexturedQuad();
         m_Icon->Create(metadata.iconPath);
-        m_Icon->m_Scale = 0.8f;
+        m_Icon->m_Scale = type == Data::ObjectType::Location ? 0.035f : 0.8f;
     }
 }
 
 void ObjectInfo::SetOpen(bool open)
 {
+    if (open)
+        Map::CloseInfoPanels();
     m_IsOpen = open;
     if (open)
         Map::m_Legend->m_IsOpen = false;
@@ -62,7 +66,7 @@ void ObjectInfo::Render(glm::mat4 projection)
     float y = Map::m_ScreenTop - 60.0f;
     Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::ObjectInfo), glm::vec2(left, y), 0.45f, glm::vec3(1.0f));
     y -= 55.0f;
-    Map::m_Font.AddTextToBatch(Localization::GetObjectTypeName(static_cast<int>(m_Type)), glm::vec2(left, y), 0.68f, glm::vec3(1.0f), ALIGN_LEFT, 285.0f);
+    Map::m_Font.AddTextToBatch(Localization::GetObjectTypeName(m_Type), glm::vec2(left, y), 0.68f, glm::vec3(1.0f), ALIGN_LEFT, 285.0f);
     y -= 62.0f;
     if (!m_Name.empty())
     {
@@ -77,7 +81,7 @@ void ObjectInfo::Render(glm::mat4 projection)
     y -= 55.0f;
     Map::m_Font.AddTextToBatch(m_Found && *m_Found ? Localization::Get(Localization::Text::Found) : Localization::Get(Localization::Text::NotFound),
                               glm::vec2(left, y), 0.46f, glm::vec3(1.0f));
-    if (m_Found && !*m_Found)
+    if (SavefileIO::GameIsRunning && m_Found && !*m_Found && ManualProgress::CanPersist())
         Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::MarkFound), glm::vec2(left, Map::m_ScreenBottom + 45.0f), 0.35f, glm::vec3(1.0f));
     Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::Close), glm::vec2(Map::m_ScreenLeft + 370.0f, Map::m_ScreenBottom + 45.0f), 0.35f, glm::vec3(1.0f), ALIGN_RIGHT);
 }

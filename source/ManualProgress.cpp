@@ -1,6 +1,7 @@
 #include "ManualProgress.h"
 
 #include <algorithm>
+#include <fstream>
 #include <istream>
 #include <ostream>
 #include <sstream>
@@ -10,7 +11,10 @@ namespace
 {
     const char* Header = "BOTW_UNEXPLORED_MANUAL_PROGRESS";
     const int Version = 1;
+    const char* FilePath = "sdmc:/switch/botw-unexplored/manual_progress.dat";
     std::vector<ManualProgress::Entry> entries;
+    bool dirty = false;
+    bool preserveFutureFile = false;
 
     bool SameKey(const ManualProgress::Entry& entry, const ManualProgress::Context& context,
                  Data::ObjectType type, uint32_t hash)
@@ -20,13 +24,22 @@ namespace
     }
 }
 
-bool ManualProgress::Load(std::istream& input)
+ManualProgress::LoadResult ManualProgress::Load(std::istream& input)
 {
-    Clear();
+    entries.clear();
+    dirty = false;
+    preserveFutureFile = false;
     std::string header;
     int version = 0;
     if (!std::getline(input, header) || header != Header || !(input >> version) || version != Version)
-        return false;
+    {
+        if (header == Header && version > Version)
+        {
+            preserveFutureFile = true;
+            return LoadResult::FutureVersion;
+        }
+        return LoadResult::Invalid;
+    }
 
     Entry entry;
     int master = 0;
@@ -35,15 +48,15 @@ bool ManualProgress::Load(std::istream& input)
     {
         if ((master != 0 && master != 1) || type < 0 || type >= static_cast<int>(Data::ObjectType::Count))
         {
-            Clear();
-            return false;
+            entries.clear();
+            return LoadResult::Invalid;
         }
         entry.context.masterMode = master != 0;
         entry.type = static_cast<Data::ObjectType>(type);
         if (!IsMarkedFound(entry.context, entry.type, entry.completionHash))
             entries.push_back(entry);
     }
-    return input.eof();
+    return input.eof() ? LoadResult::Current : LoadResult::Invalid;
 }
 
 bool ManualProgress::Save(std::ostream& output)
@@ -59,18 +72,21 @@ bool ManualProgress::Save(std::ostream& output)
 void ManualProgress::Clear()
 {
     entries.clear();
+    dirty = false;
 }
 
-void ManualProgress::MarkFound(const Context& context, Data::ObjectType type, uint32_t completionHash)
+bool ManualProgress::MarkFound(const Context& context, Data::ObjectType type, uint32_t completionHash)
 {
-    if (static_cast<int>(type) < 0 || type >= Data::ObjectType::Count || completionHash == 0 ||
+    if (!CanPersist() || static_cast<int>(type) < 0 || type >= Data::ObjectType::Count || completionHash == 0 ||
         IsMarkedFound(context, type, completionHash))
-        return;
+        return false;
     Entry entry;
     entry.context = context;
     entry.type = type;
     entry.completionHash = completionHash;
     entries.push_back(entry);
+    dirty = true;
+    return true;
 }
 
 bool ManualProgress::IsMarkedFound(const Context& context, Data::ObjectType type, uint32_t completionHash)
@@ -81,12 +97,39 @@ bool ManualProgress::IsMarkedFound(const Context& context, Data::ObjectType type
     }) != entries.end();
 }
 
-void ManualProgress::ConfirmFromSave(const Context& context, Data::ObjectType type, uint32_t completionHash)
+bool ManualProgress::ConfirmFromSave(const Context& context, Data::ObjectType type, uint32_t completionHash)
 {
+    const size_t before = entries.size();
     entries.erase(std::remove_if(entries.begin(), entries.end(), [&](const Entry& entry)
     {
         return SameKey(entry, context, type, completionHash);
     }), entries.end());
+    const bool changed = entries.size() != before;
+    dirty = dirty || changed;
+    return changed;
+}
+
+bool ManualProgress::IsDirty()
+{
+    return dirty;
+}
+
+bool ManualProgress::CanPersist()
+{
+    return !preserveFutureFile;
+}
+
+bool ManualProgress::Flush()
+{
+    if (!dirty)
+        return true;
+    if (!CanPersist())
+        return false;
+    std::ofstream output(FilePath);
+    if (!output.is_open() || !Save(output))
+        return false;
+    dirty = false;
+    return true;
 }
 
 const std::vector<ManualProgress::Entry>& ManualProgress::Entries()

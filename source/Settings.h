@@ -3,10 +3,13 @@
 #include <array>
 #include <iosfwd>
 
+#include "LegendCategories.h"
+
 namespace SettingsIO
 {
     constexpr int CurrentVersion = 2;
-    constexpr int CategoryCount = 7;
+    // Legend categories include the display-mode control, so this count is deliberately distinct from ObjectType.
+    constexpr size_t CategoryCount = LegendCategories::ButtonCount;
 
     struct Settings
     {

@@ -22,8 +22,13 @@ int main()
     std::stringstream file;
     assert(ManualProgress::Save(file));
     ManualProgress::Clear();
-    assert(ManualProgress::Load(file));
+    assert(ManualProgress::Load(file) == ManualProgress::LoadResult::Current);
     assert(ManualProgress::Entries().size() == 2);
     std::stringstream invalid("BOTW_UNEXPLORED_MANUAL_PROGRESS\n99\n");
-    assert(!ManualProgress::Load(invalid));
+    assert(ManualProgress::Load(invalid) == ManualProgress::LoadResult::FutureVersion);
+    assert(!ManualProgress::CanPersist());
+    assert(!ManualProgress::MarkFound(normal, Data::ObjectType::Korok, 300));
+    std::stringstream malformed("not a manual-progress file\n");
+    assert(ManualProgress::Load(malformed) == ManualProgress::LoadResult::Invalid);
+    assert(ManualProgress::CanPersist());
 }

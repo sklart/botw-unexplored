@@ -1,6 +1,7 @@
 #include "Map.h"
 
 #include <algorithm>
+#include <vector>
 #include <switch.h>
 
 #include "Graphics/BasicVertices.h"
@@ -16,6 +17,7 @@
 #include "Log.h"
 #include "Localization.h"
 #include "ManualProgress.h"
+#include "Navigation.h"
 
 #include "SavefileIO.h"
 
@@ -38,7 +40,10 @@ namespace
         if (foundInSave)
         {
             if (!SavefileIO::GameIsRunning)
-                ManualProgress::ConfirmFromSave(context, type, hash);
+            {
+                if (ManualProgress::ConfirmFromSave(context, type, hash))
+                    ManualProgress::Flush();
+            }
             return true;
         }
         return SavefileIO::GameIsRunning && ManualProgress::IsMarkedFound(context, type, hash);
@@ -264,9 +269,9 @@ void Map::Update()
     {
         // Close the korok dialog first, then if it's not open close the legend
         if (m_KorokDialog->m_IsOpen)
-            m_KorokDialog->SetOpen(false);
+            CloseInfoPanels();
         else if (m_ObjectInfo->m_IsOpen)
-            m_ObjectInfo->SetOpen(false);
+            CloseInfoPanels();
         else if (!m_NoSavefileDialog->m_IsOpen)
             m_Legend->m_IsOpen = !m_Legend->m_IsOpen;
     }
@@ -293,11 +298,13 @@ void Map::Update()
     {
         if (m_KorokDialog->m_IsOpen)
         {
-            if (SavefileIO::GameIsRunning)
+            if (SavefileIO::GameIsRunning && m_KorokDialog->m_KorokIndex >= 0 &&
+                !m_Koroks[m_KorokDialog->m_KorokIndex].m_Found)
             {
                 m_Koroks[m_KorokDialog->m_KorokIndex].m_Found = true;
-                ManualProgress::MarkFound(CurrentProgressContext(), Data::ObjectType::Korok,
-                                          m_Koroks[m_KorokDialog->m_KorokIndex].m_ObjectData->hash);
+                if (ManualProgress::MarkFound(CurrentProgressContext(), Data::ObjectType::Korok,
+                                              m_Koroks[m_KorokDialog->m_KorokIndex].m_ObjectData->hash))
+                    ManualProgress::Flush();
             }
             m_KorokDialog->SetOpen(false);
         }
@@ -317,6 +324,7 @@ void Map::Update()
     {
         m_CameraPosition += stickLPosition * (analogStickMovementSpeed / m_Zoom);
         m_HasTargetCameraPosition = false;
+        m_CursorFollowsTarget = false;
     }
 
     if (!m_Legend->m_IsOpen && !m_KorokDialog->m_IsOpen && !m_ObjectInfo->m_IsOpen &&
@@ -338,10 +346,16 @@ void Map::Update()
         {
             m_CameraPosition = m_TargetCameraPosition;
             m_HasTargetCameraPosition = false;
+            if (m_CursorFollowsTarget)
+            {
+                m_CursorPosition = m_TargetCameraPosition;
+                m_CursorFollowsTarget = false;
+            }
         }
         else
             m_CameraPosition += delta * 0.12f;
     }
+    ClampCursorToViewport();
 
     m_ViewMatrix = glm::mat4(1.0f); // Reset (important)
     m_ViewMatrix = glm::scale(m_ViewMatrix, glm::vec3(m_Zoom, m_Zoom, 0.0f));
@@ -370,6 +384,7 @@ void Map::Update()
                 if (state.count == 1)
                 {
                     m_HasTargetCameraPosition = false;
+                    m_CursorFollowsTarget = false;
                     // Check if clicked korok
                     bool clicked = false;
                     for (int i = 0; i < Data::KoroksCount; i++)
@@ -377,10 +392,9 @@ void Map::Update()
                         if (m_Legend->ShouldShow(m_Koroks[i].m_Found) && m_Koroks[i].IsClicked(touchPosition))
                         {
                             // Set the korok dialog
+                            CloseInfoPanels();
                             m_KorokDialog->SetSeed(m_Koroks[i].m_ObjectData->zeldaDungeonId, i);
                             m_KorokDialog->SetOpen(true);
-
-                            m_Legend->m_IsOpen = false;
 
                             clicked = true;
                         }
@@ -390,7 +404,7 @@ void Map::Update()
                     if (!clicked)
                     {
                         OpenNearestObject(touchPosition / m_Zoom + m_CameraPosition);
-                        clicked = m_ObjectInfo->m_IsOpen;
+                        clicked = m_ObjectInfo->m_IsOpen || m_KorokDialog->m_IsOpen;
                     }
 
                     // Only drag if not clicking on korok
@@ -455,6 +469,7 @@ void Map::Update()
     }
 
     m_PrevCameraPosition = m_CameraPosition;
+    ClampCursorToViewport();
 }
 
 void Map::Render()
@@ -639,22 +654,23 @@ void Map::OpenNearestObject(const glm::vec2& mapPosition)
         std::string name;
         bool* found;
         float distanceSquared;
+        int korokIndex;
     };
-    Candidate best = {Data::ObjectType::Korok, 0, glm::vec2(0.0f), "", nullptr, 1e30f};
+    Candidate best = {Data::ObjectType::Korok, 0, glm::vec2(0.0f), "", nullptr, 1e30f, -1};
     const float radius = 60.0f / m_Zoom;
     const float maxDistanceSquared = radius * radius;
     const auto consider = [&](Data::ObjectType type, uint32_t hash, const glm::vec2& position,
-                              const std::string& name, bool* found)
+                              const std::string& name, bool* found, int korokIndex = -1)
     {
         if (!m_Legend->m_Show[ObjectModel::GetMetadata(type).legendButtonIndex] || !m_Legend->ShouldShow(*found))
             return;
         const float distanceSquared = glm::dot(position - mapPosition, position - mapPosition);
         if (distanceSquared <= maxDistanceSquared && distanceSquared < best.distanceSquared)
-            best = {type, hash, position, name, found, distanceSquared};
+            best = {type, hash, position, name, found, distanceSquared, korokIndex};
     };
 
     for (int i = 0; i < Data::KoroksCount; ++i)
-        consider(Data::ObjectType::Korok, Data::Koroks[i].hash, m_Koroks[i].m_Position, "", &m_Koroks[i].m_Found);
+        consider(Data::ObjectType::Korok, Data::Koroks[i].hash, m_Koroks[i].m_Position, "", &m_Koroks[i].m_Found, i);
     for (int i = 0; i < Data::ShrineCount; ++i)
         consider(Data::ObjectType::Shrine, Data::Shrines[i].hash, m_Shrines[i].m_Position, Data::Shrines[i].displayName, &m_Shrines[i].m_Found);
     if (SavefileIO::HasDLC)
@@ -672,6 +688,14 @@ void Map::OpenNearestObject(const glm::vec2& mapPosition)
 
     if (best.found != nullptr)
     {
+        if (best.type == Data::ObjectType::Korok)
+        {
+            CloseInfoPanels();
+            m_KorokDialog->SetSeed(m_Koroks[best.korokIndex].m_ObjectData->zeldaDungeonId, best.korokIndex);
+            m_KorokDialog->SetOpen(true);
+            return;
+        }
+        CloseInfoPanels();
         m_ObjectInfo->SetObject(best.type, best.hash, best.position, best.name, best.found);
         m_ObjectInfo->SetOpen(true);
     }
@@ -682,7 +706,8 @@ void Map::MarkSelectedObjectFound()
     if (!m_ObjectInfo->m_IsOpen || m_ObjectInfo->m_Found == nullptr || *m_ObjectInfo->m_Found || !SavefileIO::GameIsRunning)
         return;
     *m_ObjectInfo->m_Found = true;
-    ManualProgress::MarkFound(CurrentProgressContext(), m_ObjectInfo->m_Type, m_ObjectInfo->m_CompletionHash);
+    if (ManualProgress::MarkFound(CurrentProgressContext(), m_ObjectInfo->m_Type, m_ObjectInfo->m_CompletionHash))
+        ManualProgress::Flush();
 }
 
 void Map::FocusNextMissing()
@@ -710,8 +735,30 @@ void Map::FocusNextMissing()
     if (bestDistanceSquared < 1e30f)
     {
         m_TargetCameraPosition = closest;
+        m_CursorPosition = closest;
         m_HasTargetCameraPosition = true;
+        m_CursorFollowsTarget = true;
     }
+}
+
+void Map::CloseInfoPanels()
+{
+    if (m_KorokDialog != nullptr)
+        m_KorokDialog->SetOpen(false);
+    if (m_ObjectInfo != nullptr)
+        m_ObjectInfo->SetOpen(false);
+    if (m_Legend != nullptr)
+        m_Legend->m_IsOpen = false;
+}
+
+void Map::ClampCursorToViewport()
+{
+    Navigation::Viewport viewport;
+    viewport.center = {m_CameraPosition.x, m_CameraPosition.y};
+    viewport.halfWidth = m_CameraWidth / (2.0f * m_Zoom);
+    viewport.halfHeight = m_CameraHeight / (2.0f * m_Zoom);
+    const Navigation::Point cursor = Navigation::ClampToViewport({m_CursorPosition.x, m_CursorPosition.y}, viewport);
+    m_CursorPosition = glm::vec2(cursor.x, cursor.y);
 }
 
 TexturedQuad Map::m_MapBackground;
@@ -736,6 +783,7 @@ bool Map::m_LoadMasterMode = false;
 glm::vec2 Map::m_CursorPosition(0.0f);
 glm::vec2 Map::m_TargetCameraPosition(0.0f);
 bool Map::m_HasTargetCameraPosition = false;
+bool Map::m_CursorFollowsTarget = false;
 
 PadState* Map::m_Pad;
 MapObject<Data::Korok>* Map::m_Koroks;

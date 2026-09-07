@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string>
 
+#include "ObjectTypes.h"
+
 namespace Localization
 {
     enum class Language
@@ -50,6 +52,13 @@ namespace Localization
         NotFound,
         ObjectInfo,
         NextMissing,
+        Korok,
+        Shrine,
+        DLCShrine,
+        Location,
+        Hinox,
+        StoneTalus,
+        Molduga,
         Count
     };
 
@@ -57,7 +66,7 @@ namespace Localization
     Language GetLanguage();
     void SetLanguage(Language language);
     const std::string& GetShowModeName(int showMode);
-    const std::string& GetObjectTypeName(int objectType);
+    const std::string& GetObjectTypeName(Data::ObjectType objectType);
     void ToggleLanguage();
     void Load();
     void Save();

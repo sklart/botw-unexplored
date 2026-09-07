@@ -31,6 +31,7 @@ bool romfsInitialized = false;
 bool socketInitialized = false;
 int s_nxlinkSock = -1;
 bool cleanupComplete = false;
+bool preserveFutureSettings = false;
 
 static SettingsIO::Settings GetCurrentSettings()
 {
@@ -48,19 +49,22 @@ static SettingsIO::Settings GetCurrentSettings()
 
 static bool SaveSettings()
 {
+    if (preserveFutureSettings)
+        return false;
     std::ofstream file("sdmc:/switch/botw-unexplored/settings.txt");
     return file.is_open() && SettingsIO::Save(file, GetCurrentSettings());
 }
 
 static bool SaveManualProgress()
 {
-    std::ofstream file("sdmc:/switch/botw-unexplored/manual_progress.dat");
-    return file.is_open() && ManualProgress::Save(file);
+    if (!ManualProgress::CanPersist())
+        return false;
+    return ManualProgress::Flush();
 }
 
 static void MigrateLegacyKorokProgress()
 {
-    if (!SavefileIO::GameIsRunning || Map::m_Koroks == nullptr)
+    if (!SavefileIO::GameIsRunning || Map::m_Koroks == nullptr || !ManualProgress::CanPersist())
         return;
 
     std::ifstream legacyFile("sdmc:/switch/botw-unexplored/koroks.txt");
@@ -125,12 +129,16 @@ void cleanUp()
     if (!SavefileIO::DirectoryExists("sdmc:/switch/botw-unexplored"))
         mkdir("sdmc:/switch/botw-unexplored", 0777);
 
-    if (Map::m_Legend != nullptr && SaveSettings())
+    if (preserveFutureSettings)
+        Log("Preserved future settings file");
+    else if (Map::m_Legend != nullptr && SaveSettings())
         Log("Saved settings");
     else
         Log("Failed top open settings file (cleanUp())");
 
-    if (SaveManualProgress())
+    if (!ManualProgress::CanPersist())
+        Log("Preserved future manual progress file");
+    else if (SaveManualProgress())
         Log("Saved manual progress");
     else
         Log("Failed to save manual progress");
@@ -241,7 +249,10 @@ int main()
                 Log("Failed to migrate legacy settings");
         }
         else if (result == SettingsIO::LoadResult::FutureVersion)
+        {
+            preserveFutureSettings = true;
             Log("Settings file uses an unsupported future version");
+        }
         else if (result == SettingsIO::LoadResult::Invalid)
             Log("Ignoring invalid settings file");
     }
@@ -253,8 +264,14 @@ int main()
     settingsFile.close();
 
     std::ifstream manualProgressFile("sdmc:/switch/botw-unexplored/manual_progress.dat");
-    if (manualProgressFile.is_open() && !ManualProgress::Load(manualProgressFile))
-        Log("Ignoring invalid manual progress file");
+    if (manualProgressFile.is_open())
+    {
+        const ManualProgress::LoadResult result = ManualProgress::Load(manualProgressFile);
+        if (result == ManualProgress::LoadResult::FutureVersion)
+            Log("Manual progress file uses an unsupported future version");
+        else if (result == ManualProgress::LoadResult::Invalid)
+            Log("Ignoring invalid manual progress file");
+    }
 
     bool hasDoneFirstDraw = false;
     bool hasLoadedSave = false;

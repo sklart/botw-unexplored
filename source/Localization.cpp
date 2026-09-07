@@ -1,6 +1,7 @@
 #include "Localization.h"
 
 #include <cstdio>
+#include <array>
 #include <sys/stat.h>
 
 namespace
@@ -30,7 +31,7 @@ namespace
         "Shrines", "Hinoxes", "Taluses", "Moldugas", "Locations", "Show Completed", "B - mark as found",
         "Press X: legend", "BotW is running.", "Loaded older save", "Press Y: master mode",
         "Press Y: normal mode", "L/R: zoom  (-): user  (+): exit", "EN", "Missing", "Completed", "All",
-        "Position", "Found", "Not found", "Object info", "Next missing"
+        "Position", "Found", "Not found", "Object info", "Next missing", "Korok", "Shrine", "DLC Shrine", "Location", "Hinox", "Stone Talus", "Molduga"
     };
 
     const std::string spanish[] = {
@@ -40,7 +41,7 @@ namespace
         "Santuarios", "Hinóx", "Taludes", "Moldugas", "Ubicaciones", "Mostrar completados", "B - marcar como encontrado",
         "X: leyenda", "BotW está en ejecución.", "Se cargó una partida anterior", "Y: modo maestro",
         "Y: modo normal", "L/R: zoom  (-): usuario  (+): salir", "ES", "Pendientes", "Completados", "Todos",
-        "Posición", "Encontrado", "No encontrado", "Información", "Siguiente pendiente"
+        "Posición", "Encontrado", "No encontrado", "Información", "Siguiente pendiente", "Kolog", "Santuario", "Santuario DLC", "Ubicación", "Hinóx", "Talud de piedra", "Moldora"
     };
     const std::string russian[] = {
         "Выход", "Выбрать другой профиль", "Для этого пользователя не найдены сохранения", "Убедитесь, что выбран правильный профиль.",
@@ -49,7 +50,7 @@ namespace
         "Святилища", "Хиноксы", "Глыбники", "Молдоры", "Локации", "Показывать найденное", "B - отметить найденным",
         "X: открыть легенду", "BotW запущена.", "Загружено старое сохранение", "Y: режим мастера",
         "Y: обычный режим", "L/R: масштаб  (-): профиль  (+): выход", "RU", "Не найдено", "Найдено", "Все",
-        "Координаты", "Найдено", "Не найдено", "Информация об объекте", "Следующий не найденный"
+        "Координаты", "Найдено", "Не найдено", "Информация об объекте", "Следующий не найденный", "Корок", "Святилище", "Святилище DLC", "Локация", "Хинокс", "Глыбник", "Молдора"
     };
 
     static_assert(sizeof(english) / sizeof(english[0]) == static_cast<size_t>(Localization::Text::Count), "English localization is incomplete");
@@ -81,13 +82,17 @@ const std::string& Localization::GetShowModeName(int showMode)
     return Get(static_cast<Text>(static_cast<int>(Text::Missing) + clamped));
 }
 
-const std::string& Localization::GetObjectTypeName(int objectType)
+const std::string& Localization::GetObjectTypeName(Data::ObjectType objectType)
 {
-    static const Text names[] = {Text::Koroks, Text::Shrines, Text::Shrines, Text::Locations,
-                                 Text::Hinoxes, Text::Taluses, Text::Moldugas};
-    if (objectType < 0 || objectType >= 7)
+    const std::array<Text, static_cast<size_t>(Data::ObjectType::Count)> names = {{
+        Text::Korok, Text::Shrine, Text::DLCShrine, Text::Location,
+        Text::Hinox, Text::StoneTalus, Text::Molduga
+    }};
+    static_assert(names.size() == static_cast<size_t>(Data::ObjectType::Count), "Singular names must match ObjectType");
+    const int index = static_cast<int>(objectType);
+    if (index < 0 || index >= static_cast<int>(names.size()))
         return Get(Text::ObjectInfo);
-    return Get(names[objectType]);
+    return Get(names[static_cast<size_t>(index)]);
 }
 
 void Localization::ToggleLanguage()

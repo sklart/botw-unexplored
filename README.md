@@ -2,7 +2,9 @@
 
 BotW Unexplored is a Nintendo Switch homebrew map companion for *The Legend of Zelda: Breath of the Wild*. It reads the selected local save (or a previously created backup while the game is running) and shows collectible progress directly on the console.
 
-This repository is the maintained fork of [lud99/botw-unexplored](https://github.com/lud99/botw-unexplored). The current fork release is **v2.2.0**.
+This repository is the maintained fork of [lud99/botw-unexplored](https://github.com/lud99/botw-unexplored). The current fork release is **v2.2.1**.
+
+[Русская версия документации](docs/README.ru.md)
 
 ## Features
 
@@ -35,8 +37,8 @@ For backup-based use while BotW is running, start BotW Unexplored once with the 
 | Map | `-` | Choose another profile |
 | Map | `+` | Exit |
 | Map | D-Pad | Move the controller cursor |
-| Map | `A` | Open the nearest object at the cursor |
-| Map | `ZR` | Smoothly focus the nearest missing visible object |
+| Map | `A` | Open the full Korok guide for a Korok, or ObjectInfo for another object |
+| Map | `ZR` | Smoothly focus the nearest missing visible object and place the cursor on it |
 | Object info | `B` | Mark a missing object as found while using a backup |
 | Legend | D-Pad, `A`, or touch | Select/toggle a category or cycle display mode |
 | Legend | `ZL` | Switch language |

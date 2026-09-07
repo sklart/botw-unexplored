@@ -22,11 +22,21 @@ namespace ManualProgress
         uint32_t completionHash = 0;
     };
 
-    bool Load(std::istream& input);
+    enum class LoadResult
+    {
+        Current,
+        Invalid,
+        FutureVersion
+    };
+
+    LoadResult Load(std::istream& input);
     bool Save(std::ostream& output);
     void Clear();
-    void MarkFound(const Context& context, Data::ObjectType type, uint32_t completionHash);
+    bool MarkFound(const Context& context, Data::ObjectType type, uint32_t completionHash);
     bool IsMarkedFound(const Context& context, Data::ObjectType type, uint32_t completionHash);
-    void ConfirmFromSave(const Context& context, Data::ObjectType type, uint32_t completionHash);
+    bool ConfirmFromSave(const Context& context, Data::ObjectType type, uint32_t completionHash);
+    bool IsDirty();
+    bool CanPersist();
+    bool Flush();
     const std::vector<Entry>& Entries();
 }

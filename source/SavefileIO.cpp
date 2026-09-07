@@ -13,6 +13,7 @@
 #include "Map.h"
 #include "Dialog.h"
 #include "Log.h"
+#include "SaveLoadDecision.h"
 
 namespace
 {
@@ -62,7 +63,9 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
             }
 
             MasterModeFileLoaded = success;
-            return success;
+            const SaveLoadDecision::Outcome outcome = SaveLoadDecision::Resolve(mountStatus, true, success);
+            LoadedSavefile = outcome.loadedSavefile;
+            return outcome.success;
         }
         MasterModeFileLoaded = false;
 
@@ -79,7 +82,9 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
         // Backups are created only while this call owns the mounted save.
         if (!chooseProfile)
             CopySavefiles();
-        return true;
+        const SaveLoadDecision::Outcome outcome = SaveLoadDecision::Resolve(mountStatus, false, true);
+        LoadedSavefile = outcome.loadedSavefile;
+        return outcome.success;
     }
     // Failed to mount it. Can happen if no profile was choosen, or some other account thing went wrong 
     if (mountStatus == 0) {  // No save for profile
@@ -90,7 +95,7 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
     if (mountStatus == -1) { // Game is running
         Log("Game is running. Loading backup...");
 
-        bool loadedBackupSuccess = LoadBackup(loadMasterMode);
+        const bool loadedBackupSuccess = LoadBackup(loadMasterMode);
 
         if (!loadedBackupSuccess) 
         {
@@ -100,7 +105,10 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
 
             return false;
         }
-
+        const SaveLoadDecision::Outcome outcome = SaveLoadDecision::Resolve(mountStatus, loadMasterMode, true);
+        LoadedSavefile = outcome.loadedSavefile;
+        MasterModeFileLoaded = outcome.masterModeLoaded;
+        return outcome.success;
     }
     if (mountStatus == -2) { // User has no save data
         Log("The selected user has no save data");

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Graphics/Quad.h"
+#include "LegendCategories.h"
 
 class Legend;
 
@@ -14,16 +15,14 @@ enum class ShowMode
 class IconButton
 {
 public:
-    enum ButtonTypes {
-        Koroks = 0,
-        Shrines = 1,
-        Hinoxes = 2,
-        Taluses = 3,
-        Moldugas = 4,
-        Locations = 5,
-        ShowCompleted = 6,
-        Count = 7
-    };
+    using ButtonTypes = LegendCategories::ButtonTypes;
+    static constexpr ButtonTypes Koroks = ButtonTypes::Koroks;
+    static constexpr ButtonTypes Shrines = ButtonTypes::Shrines;
+    static constexpr ButtonTypes Hinoxes = ButtonTypes::Hinoxes;
+    static constexpr ButtonTypes Taluses = ButtonTypes::Taluses;
+    static constexpr ButtonTypes Moldugas = ButtonTypes::Moldugas;
+    static constexpr ButtonTypes Locations = ButtonTypes::Locations;
+    static constexpr ButtonTypes ShowCompleted = ButtonTypes::ShowCompleted;
 
 public:
     IconButton();
@@ -88,5 +87,5 @@ public:
     ShowMode m_ShowMode = ShowMode::Missing;
     bool m_IsOpen = true;
 
-    bool m_Show[IconButton::ButtonTypes::Count];
+    bool m_Show[LegendCategories::ButtonCount];
 };

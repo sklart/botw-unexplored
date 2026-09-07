@@ -5,7 +5,7 @@
 int main()
 {
     const char* expectedIcons[] = {
-        "romfs:/korokseed.png", "romfs:/shrine.png", "romfs:/dlcshrine.png", "",
+        "romfs:/korokseed.png", "romfs:/shrine.png", "romfs:/dlcshrine.png", "romfs:/village.png",
         "romfs:/hinox.png", "romfs:/talus.png", "romfs:/molduga.png"
     };
     const int expectedLegendButtons[] = {0, 1, 1, 5, 2, 3, 4};
@@ -14,10 +14,12 @@ int main()
     {
         const Data::ObjectType type = static_cast<Data::ObjectType>(value);
         assert(ObjectModel::IsValidType(type));
+        assert(ObjectModel::TryGetMetadata(type) != nullptr);
         const ObjectModel::TypeMetadata& metadata = ObjectModel::GetMetadata(type);
         assert(std::string(metadata.iconPath) == expectedIcons[value]);
         assert(metadata.legendButtonIndex == expectedLegendButtons[value]);
     }
     assert(!ObjectModel::IsValidType(Data::ObjectType::Count));
+    assert(ObjectModel::TryGetMetadata(Data::ObjectType::Count) == nullptr);
     return 0;
 }

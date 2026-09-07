@@ -164,7 +164,7 @@ bool Legend::IsPositionOnLegend(glm::vec2 position)
 {
     float left = -Map::m_CameraWidth / 2;
     if (position.x > left && position.x < left + m_Width) {
-        if (position.y > -Map::m_CameraHeight / 2 && position.y < Map::m_CameraWidth / 2) {
+        if (position.y > -Map::m_CameraHeight / 2 && position.y < Map::m_CameraHeight / 2) {
             return true;
         }
     }
@@ -230,6 +230,7 @@ IconButton::IconButton(ButtonTypes type, glm::vec2 position, float width, float 
     case Locations:
         m_Text = "Locations";
         iconPath = "romfs:/village.png";
+        iconScale = 0.022f;
 
         break;
     case ShowCompleted:
