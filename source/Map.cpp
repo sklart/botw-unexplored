@@ -514,21 +514,33 @@ bool Map::IsInView(glm::vec2 position, float margin = 100.0f)
     return true;
 }
 
-void Map::Destory()
+void Map::Destroy()
 {
     delete[] m_Koroks;
+    m_Koroks = nullptr;
     delete[] m_Shrines;
+    m_Shrines = nullptr;
     delete[] m_DLCShrines;
+    m_DLCShrines = nullptr;
     delete[] m_Hinoxes;
+    m_Hinoxes = nullptr;
     delete[] m_Taluses;
+    m_Taluses = nullptr;
     delete[] m_Moldugas;
+    m_Moldugas = nullptr;
     delete[] m_Locations;
+    m_Locations = nullptr;
 
     delete m_Legend;
+    m_Legend = nullptr;
     delete m_NoSavefileDialog;
+    m_NoSavefileDialog = nullptr;
     delete m_GameRunningDialog;
+    m_GameRunningDialog = nullptr;
     delete m_MasterModeDialog;
+    m_MasterModeDialog = nullptr;
     delete m_KorokDialog;
+    m_KorokDialog = nullptr;
     delete m_LineRenderer;
     m_LineRenderer = nullptr;
 

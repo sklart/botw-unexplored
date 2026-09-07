@@ -4,7 +4,7 @@
 #include <dirent.h>
 #include <iostream>
 #include <map>
-#include <iostream>
+#include <limits>
 #include <stdio.h>
 
 #include <switch.h>
@@ -14,6 +14,25 @@
 #include "Dialog.h"
 #include "Log.h"
 
+namespace
+{
+    bool saveMounted = false;
+
+    class SaveMountGuard
+    {
+    public:
+        explicit SaveMountGuard(bool mounted) : m_Mounted(mounted) {}
+        ~SaveMountGuard()
+        {
+            if (m_Mounted)
+                SavefileIO::UnmountSavefile();
+        }
+
+    private:
+        bool m_Mounted;
+    };
+}
+
 bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
 {
     Log("Loading gamesave. Master mode: " + std::string(loadMasterMode ? "true" : "false") + 
@@ -22,15 +41,15 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
     // Try to mount the save directory
     int mountStatus = MountSavefile(chooseProfile);
 
-    bool dialogWasOpen = Map::m_GameRunningDialog->m_IsOpen || Map::m_MasterModeDialog->m_IsOpen || Map::m_NoSavefileDialog->m_IsOpen;
-
     Map::m_GameRunningDialog->SetOpen(false);
     Map::m_MasterModeDialog->SetOpen(false);
     Map::m_NoSavefileDialog->SetOpen(false);
 
     Log("Mount status:", mountStatus);
 
-    if (mountStatus == 1) { // Good
+    if (mountStatus == 1)
+    {
+        SaveMountGuard mountGuard(true);
         if (loadMasterMode)
         {
             bool success = false;
@@ -42,13 +61,10 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
                     Log("Mastermode savefile failed to parse");
             }
 
-            if (success) MasterModeFileLoaded = true;
-
-            UnmountSavefile();
-                
+            MasterModeFileLoaded = success;
             return success;
-        } else
-            MasterModeFileLoaded = false;
+        }
+        MasterModeFileLoaded = false;
 
         std::string path = "save:/" + std::to_string(MostRecentNormalModeFile) + "/game_data.sav";
         bool success = ParseFile(path.c_str());
@@ -56,23 +72,22 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
         {
             Log("Normal mode savefile failed to parse");
 
-            UnmountSavefile();
             Map::m_NoSavefileDialog->SetOpen(true);
             return false;
         }
 
-        // No need to copy savefiles if they have already been copied (this flag is never set the first time)
+        // Backups are created only while this call owns the mounted save.
         if (!chooseProfile)
             CopySavefiles();
-
-        UnmountSavefile();
-    } 
+        return true;
+    }
     // Failed to mount it. Can happen if no profile was choosen, or some other account thing went wrong 
-    else if (mountStatus == 0) {  // No save for profile
+    if (mountStatus == 0) {  // No save for profile
         Log("Canceled profile picker");
 
         return false;
-    } else if (mountStatus == -1) { // Game is running
+    }
+    if (mountStatus == -1) { // Game is running
         Log("Game is running. Loading backup...");
 
         bool loadedBackupSuccess = LoadBackup(loadMasterMode);
@@ -86,34 +101,35 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
             return false;
         }
 
-        // if (dialogWasOpen)
-        //     Map::m_Legend->m_IsOpen = true;
-    } else if (mountStatus == -2) { // User has no save data
+    }
+    if (mountStatus == -2) { // User has no save data
         Log("The selected user has no save data");
 
         MasterModeFileLoaded = false;
         Map::m_NoSavefileDialog->SetOpen(true);
         
-        UnmountSavefile();
-
         return false;
     }
 
-    return true;
+    return false;
 }
 
-uint32_t SavefileIO::ReadU32(unsigned char *buffer, int offset)
+uint32_t SavefileIO::ReadU32(const uint8_t* buffer, size_t offset)
 {
-    // Little endian byte order
-    return ((buffer[offset + 0] << 0) +
-            (buffer[offset + 1] << 8) +
-            (buffer[offset + 2] << 16) +
-            (buffer[offset + 3] << 24)) >>
-           0 /* Make it positive? */;
+    return static_cast<uint32_t>(buffer[offset]) |
+           (static_cast<uint32_t>(buffer[offset + 1]) << 8) |
+           (static_cast<uint32_t>(buffer[offset + 2]) << 16) |
+           (static_cast<uint32_t>(buffer[offset + 3]) << 24);
 }
 
 int SavefileIO::MountSavefile(bool openProfilePicker)
 {
+    if (saveMounted)
+    {
+        Log("Refusing to mount an already mounted save");
+        return -2;
+    }
+
     Result rc = 0;
     u64 botwId = 0x01007ef00011e000;
     AccountUid uid = {0};
@@ -132,7 +148,7 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
 
         if (accountUidIsValid(&uid))
         {
-            Result rc = fsdevMountSaveData("save", botwId, uid);
+            Result rc = fsdevMountSaveDataReadOnly("save", botwId, uid);
             if (R_FAILED(rc))
             {
                 Log("Failed to mount save (cached user)");
@@ -140,6 +156,7 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
 
                 return -1;
             }
+            saveMounted = true;
 
             Log("Using cached account");
 
@@ -150,6 +167,7 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
             if (MostRecentNormalModeFile == -1) 
             {
                 Log("No normal mode file exists (cached user)");
+                UnmountSavefile();
                 return -2;
             }
 
@@ -161,6 +179,7 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
     
     // Required for getting users
     rc = accountInitialize(AccountServiceType_Administrator);
+    const bool accountServiceInitialized = R_SUCCEEDED(rc);
     if (R_FAILED(rc)) {
         Log("accountInitialize() failed");
     }
@@ -202,7 +221,8 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
         }
     }
 
-    accountExit();
+    if (accountServiceInitialized)
+        accountExit();
 
     AccountUid1 = uid.uid[0];
     AccountUid2 = uid.uid[1];
@@ -262,6 +282,7 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
 
         return -1;
     }
+    saveMounted = true;
 
     // Figure out which save file is the most recent one
     MostRecentNormalModeFile = GetMostRecentSavefile("save:/", false);
@@ -270,6 +291,7 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
     if (MostRecentNormalModeFile == -1)
     {
         Log("No savefile exists, even though savedata exists");
+        UnmountSavefile();
         return -2;
     }
 
@@ -278,15 +300,16 @@ int SavefileIO::MountSavefile(bool openProfilePicker)
 
 bool SavefileIO::UnmountSavefile()
 {
-    //When you are done with savedata, you can use the below.
-    //Any devices still mounted at app exit are automatically unmounted.
-    bool fail = R_FAILED(fsdevUnmountDevice("save"));
-    if (fail)
+    if (!saveMounted)
+        return true;
+
+    if (R_FAILED(fsdevUnmountDevice("save")))
     {
         Log("Failed to unmount save");
-        return true;
+        return false;
     }
 
+    saveMounted = false;
     return true;
 }
 
@@ -331,32 +354,30 @@ uint32_t SavefileIO::GetSavefilePlaytime(const std::string& filepath)
 
     // Get length of file
     file.seekg(0, file.end);
-    unsigned int fileSize = (unsigned int)file.tellg(); // Get file size
+    const std::streamoff length = file.tellg();
+    if (length <= 0 || length > static_cast<std::streamoff>(std::numeric_limits<uint32_t>::max()))
+        return 0;
+    const size_t fileSize = static_cast<size_t>(length);
     file.seekg(0, file.beg);
 
-    unsigned char *buffer = new unsigned char[fileSize];
-
-    // Read the entire file into the buffer. Need to cast the buffer to a non-signed char*.
-    file.read((char *)&buffer[0], fileSize);
-
-    file.close();
+    std::vector<uint8_t> buffer(fileSize);
+    if (!file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(fileSize)))
+        return 0;
 
     uint32_t playtimeHash = 0x73c29681;
     
     // Iterate to find the location of the hash
     uint32_t playtime = 0;
-    for (unsigned int offset = 0x0c; offset < fileSize - 4; offset += 8)
+    for (size_t offset = 0x0c; offset + 8 <= fileSize; offset += 8)
     {
         // Read the hash
-        uint32_t hashValue = ReadU32(buffer, offset);
+        uint32_t hashValue = ReadU32(buffer.data(), offset);
         if (hashValue == playtimeHash)
         {
-            playtime = ReadU32(buffer, offset + 4);
+            playtime = ReadU32(buffer.data(), offset + 4);
             break;
         }
     }
-
-    delete buffer;
 
     return playtime;
 }
@@ -441,7 +462,6 @@ void SavefileIO::CopySavefiles()
         Log("Copied savefile " + savefileFolders[i] + " to " + target);
     }
 
-    SavefileIO::UnmountSavefile();
 }
 
 s32 SavefileIO::CopyFile(const std::string &srcPath, const std::string &dstPath)
@@ -450,24 +470,27 @@ s32 SavefileIO::CopyFile(const std::string &srcPath, const std::string &dstPath)
     FILE *dst = fopen(dstPath.c_str(), "wb+");
 
     if (src == nullptr || dst == nullptr)
+    {
+        if (src) fclose(src);
+        if (dst) fclose(dst);
         return -1;
+    }
 
     fseek(src, 0, SEEK_END);
     rewind(src);
 
     size_t size;
-    char *buf = new char[0x50000];
-
-    u64 offset = 0;
-    size_t slashpos = srcPath.rfind("/");
-    std::string name = srcPath.substr(slashpos + 1, srcPath.length() - slashpos - 1);
-    while ((size = fread(buf, 1, 0x50000, src)) > 0)
+    std::vector<char> buffer(0x50000);
+    while ((size = fread(buffer.data(), 1, buffer.size(), src)) > 0)
     {
-        fwrite(buf, 1, size, dst);
-        offset += size;
+        if (fwrite(buffer.data(), 1, size, dst) != size)
+        {
+            fclose(src);
+            fclose(dst);
+            return -1;
+        }
     }
 
-    delete[] buf;
     fclose(src);
     fclose(dst);
 
@@ -540,30 +563,32 @@ bool SavefileIO::ParseFile(const char *filepath)
 
     // Get length of file
     file.seekg(0, file.end);
-    unsigned int fileSize = (unsigned int)file.tellg(); // File size is below sizeof(unsigned int), so the cast is fine
+    const std::streamoff length = file.tellg();
+    if (length < 0 || length > static_cast<std::streamoff>(std::numeric_limits<uint32_t>::max()))
+        return false;
+    const size_t fileSize = static_cast<size_t>(length);
+    if (fileSize < 0x14)
+        return false;
     file.seekg(0, file.beg);
 
-    unsigned char *buffer = new unsigned char[fileSize];
-
-    // Read the entire file into the buffer. Need to cast the buffer to a non-signed char*.
-    file.read((char *)&buffer[0], fileSize);
-
-    file.close();
+    std::vector<uint8_t> buffer(fileSize);
+    if (!file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(fileSize)))
+        return false;
 
     // Based on https://github.com/d4mation/botw-unexplored-viewer/blob/master/assets/js/zelda-botw.js
 
     // Iterate through the entire savefile to find the korok seed and location hashes
-    for (unsigned int offset = 0x0c; offset < fileSize - 4; offset += 8)
+    for (size_t offset = 0x0c; offset + 8 <= fileSize; offset += 8)
     {
         // Read the korok or location hash ('id')
-        uint32_t hashValue = ReadU32(buffer, offset);
+        uint32_t hashValue = ReadU32(buffer.data(), offset);
 
         // Check if a korok with the hash exists
         Data::Korok *korok = Data::KorokExists(hashValue);
         if (korok)
         {
             // Read the 4 bytes after the hash. If it's not 0, then the seed has been found.
-            bool found = ReadU32(buffer, offset + 4) != 0;
+            bool found = ReadU32(buffer.data(), offset + 4) != 0;
 
             found ? foundKoroks.push_back(korok) : missingKoroks.push_back(korok);
         }
@@ -574,7 +599,7 @@ bool SavefileIO::ParseFile(const char *filepath)
         if (shrine)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the shrine has been found.
-            bool defeated = ReadU32(buffer, offset + 4) != 0;
+            bool defeated = ReadU32(buffer.data(), offset + 4) != 0;
 
             defeated ? foundShrines.push_back(shrine) : missingShrines.push_back(shrine);
         }
@@ -584,7 +609,7 @@ bool SavefileIO::ParseFile(const char *filepath)
         if (dlcShrine)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the shrine has been found.
-            bool defeated = ReadU32(buffer, offset + 4) != 0;
+            bool defeated = ReadU32(buffer.data(), offset + 4) != 0;
 
             defeated ? foundDLCShrines.push_back(dlcShrine) : missingDLCShrines.push_back(dlcShrine);
         }
@@ -594,7 +619,7 @@ bool SavefileIO::ParseFile(const char *filepath)
         if (location)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the location has been visited.
-            bool visited = ReadU32(buffer, offset + 4) != 0;
+            bool visited = ReadU32(buffer.data(), offset + 4) != 0;
 
             visited ? visitedLocations.push_back(location) : unexploredLocations.push_back(location);
         }
@@ -604,7 +629,7 @@ bool SavefileIO::ParseFile(const char *filepath)
         if (hinox)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the hinox has been defeated.
-            bool defeated = ReadU32(buffer, offset + 4) != 0;
+            bool defeated = ReadU32(buffer.data(), offset + 4) != 0;
 
             defeated ? defeatedHinoxes.push_back(hinox) : undefeatedHinoxes.push_back(hinox);
         }
@@ -614,7 +639,7 @@ bool SavefileIO::ParseFile(const char *filepath)
         if (talus)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the talus has been defeated.
-            bool defeated = ReadU32(buffer, offset + 4) != 0;
+            bool defeated = ReadU32(buffer.data(), offset + 4) != 0;
 
             defeated ? defeatedTaluses.push_back(talus) : undefeatedTaluses.push_back(talus);
         }
@@ -624,7 +649,7 @@ bool SavefileIO::ParseFile(const char *filepath)
         if (molduga)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the molduga has been defeated.
-            bool defeated = ReadU32(buffer, offset + 4) != 0;
+            bool defeated = ReadU32(buffer.data(), offset + 4) != 0;
 
             defeated ? defeatedMoldugas.push_back(molduga) : undefeatedMoldugas.push_back(molduga);
         }
@@ -632,12 +657,10 @@ bool SavefileIO::ParseFile(const char *filepath)
         // Check if has the dlc
         uint32_t BalladOfHeroes_Ready = 1186840637; // Set to true if the DLC is owned
         if (hashValue == BalladOfHeroes_Ready) {
-            HasDLC = ReadU32(buffer, offset + 4) == 1;
+            HasDLC = ReadU32(buffer.data(), offset + 4) == 1;
             Log("User has DLC:", HasDLC ? "true" : "false");
         }
     }
-
-    delete buffer;
 
     Log("Successfully parsed file", filepath);
 

@@ -50,7 +50,7 @@ namespace Data
         float y = 0;
 
         Shrine(uint32_t hash, const std::string& displayName, float x, float y) :
-            hash(hash), x(x), y(y) {};
+            hash(hash), displayName(displayName), x(x), y(y) {};
     };
 
     // From https://github.com/MrCheeze/botw-tools/blob/master/gamedata/s32_data_0.xml

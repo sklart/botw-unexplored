@@ -32,7 +32,10 @@ namespace Map
 
     bool IsInView(glm::vec2 position, float margin);
 
-    void Destory();
+    void Destroy();
+
+    // Compatibility with out-of-tree callers that still use the historical typo.
+    inline void Destory() { Destroy(); }
 
     const float m_DefaultZoom = 0.125f * 2;
     const float m_CameraWidth = 1280.0f;

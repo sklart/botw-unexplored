@@ -23,26 +23,31 @@
 
 bool openGLInitialized = false;
 bool nxLinkInitialized = false;
+bool socketInitialized = false;
 int s_nxlinkSock = -1;
+bool cleanupComplete = false;
 
 static void deinitNxLink()
 {
     if (s_nxlinkSock >= 0)
     {
         close(s_nxlinkSock);
-        socketExit();
         s_nxlinkSock = -1;
     }
 }
 
 void cleanUp()
 {
+    if (cleanupComplete)
+        return;
+    cleanupComplete = true;
+
     // Save settings
     if (!SavefileIO::DirectoryExists("sdmc:/switch/botw-unexplored"))
         mkdir("sdmc:/switch/botw-unexplored", 0777);
 
     std::ofstream file("sdmc:/switch/botw-unexplored/settings.txt");
-    if (file.is_open())
+    if (file.is_open() && Map::m_Legend != nullptr)
     {
         file << Map::m_CameraPosition.x << "\n";
         file << Map::m_CameraPosition.y << "\n";
@@ -57,7 +62,7 @@ void cleanUp()
     file.close();
 
     // Save marked koroks
-    if (SavefileIO::GameIsRunning)
+    if (SavefileIO::GameIsRunning && Map::m_Koroks != nullptr)
     {
         std::ofstream koroksFile("sdmc:/switch/botw-unexplored/koroks.txt");
         if (koroksFile.is_open())
@@ -82,21 +87,30 @@ void cleanUp()
     }
 
     Log("SHUTDOWN: map cleanup begin");
-    Map::Destory();
+    Map::Destroy();
     Log("SHUTDOWN: map cleanup complete");
 
     // Cleanup
     Log("SHUTDOWN: romfs cleanup begin");
-    romfsExit();
+    if (openGLInitialized)
+        romfsExit();
     Log("SHUTDOWN: EGL cleanup begin");
 
     // Deinitialize EGL
-    deinitEgl();
+    if (openGLInitialized)
+    {
+        deinitEgl();
+        openGLInitialized = false;
+    }
     Log("SHUTDOWN: EGL cleanup complete");
 
     // Deinitialize network
     deinitNxLink();
-    socketExit();
+    if (socketInitialized)
+    {
+        socketExit();
+        socketInitialized = false;
+    }
 }
 
 int main()
@@ -111,6 +125,7 @@ int main()
 
     // Setup NXLink
     socketInitializeDefault();
+    socketInitialized = true;
     s_nxlinkSock = nxlinkStdio();
     nxLinkInitialized = true;
     Log("START: network complete");
@@ -148,12 +163,7 @@ int main()
     if (!Map::Init())
     {
         Log("START: map initialization failed");
-        romfsExit();
-        deinitEgl();
-        if (s_nxlinkSock >= 0)
-            deinitNxLink();
-        else
-            socketExit();
+        cleanUp();
         appletUnlockExit();
         return EXIT_FAILURE;
     }
