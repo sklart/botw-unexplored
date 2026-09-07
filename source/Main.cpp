@@ -1,5 +1,6 @@
 #include <fstream>
 #include <algorithm>
+#include <cstdio>
 #include <cstdint>
 #include <iostream>
 #include <iomanip>
@@ -26,7 +27,7 @@
 #include "ManualProgress.h"
 
 bool openGLInitialized = false;
-bool nxLinkInitialized = false;
+bool romfsInitialized = false;
 bool socketInitialized = false;
 int s_nxlinkSock = -1;
 bool cleanupComplete = false;
@@ -55,6 +56,40 @@ static bool SaveManualProgress()
 {
     std::ofstream file("sdmc:/switch/botw-unexplored/manual_progress.dat");
     return file.is_open() && ManualProgress::Save(file);
+}
+
+static void MigrateLegacyKorokProgress()
+{
+    if (!SavefileIO::GameIsRunning || Map::m_Koroks == nullptr)
+        return;
+
+    std::ifstream legacyFile("sdmc:/switch/botw-unexplored/koroks.txt");
+    if (!legacyFile.is_open())
+        return;
+
+    const ManualProgress::Context context = {SavefileIO::AccountUid1, SavefileIO::AccountUid2, Map::m_LoadMasterMode};
+    std::string value;
+    for (int i = 0; i < Data::KoroksCount; ++i)
+    {
+        if (!std::getline(legacyFile, value) || (value != "0" && value != "1"))
+        {
+            Log("Ignoring malformed legacy Korok progress file");
+            return;
+        }
+        if (value == "1")
+        {
+            Map::m_Koroks[i].m_Found = true;
+            ManualProgress::MarkFound(context, Data::ObjectType::Korok, Data::Koroks[i].hash);
+        }
+    }
+
+    if (SaveManualProgress())
+    {
+        std::remove("sdmc:/switch/botw-unexplored/koroks.txt");
+        Log("Migrated legacy Korok progress");
+    }
+    else
+        Log("Failed to migrate legacy Korok progress");
 }
 
 static void ApplySettings(const SettingsIO::Settings& settings)
@@ -106,8 +141,11 @@ void cleanUp()
 
     // Cleanup
     Log("SHUTDOWN: romfs cleanup begin");
-    if (openGLInitialized)
+    if (romfsInitialized)
+    {
         romfsExit();
+        romfsInitialized = false;
+    }
     Log("SHUTDOWN: EGL cleanup begin");
 
     // Deinitialize EGL
@@ -138,15 +176,20 @@ int main()
     Log("START: applet lock complete");
 
     // Setup NXLink
-    socketInitializeDefault();
-    socketInitialized = true;
-    s_nxlinkSock = nxlinkStdio();
-    nxLinkInitialized = true;
+    if (R_SUCCEEDED(socketInitializeDefault()))
+    {
+        socketInitialized = true;
+        s_nxlinkSock = nxlinkStdio();
+    }
+    else
+        Log("socketInitializeDefault() failed");
     Log("START: network complete");
 
     // Init romfs
     if (R_FAILED(romfsInit()))
         Log("romfsInit() failed");
+    else
+        romfsInitialized = true;
     Log("START: RomFS complete");
 
     // Configure our supported input layout: a single player with standard controller styles
@@ -158,7 +201,9 @@ int main()
     if (!openGLInitialized)
     {
         Log("OpenGL Failed to initialize");
-        return 0;
+        cleanUp();
+        appletUnlockExit();
+        return EXIT_FAILURE;
     }
     Log("START: EGL complete");
 
@@ -242,6 +287,7 @@ int main()
             Log("LoadGamesave() status:", SavefileIO::LoadGamesave() ? "true" : "false");
 
             Map::UpdateMapObjects();
+            MigrateLegacyKorokProgress();
 
         }
 

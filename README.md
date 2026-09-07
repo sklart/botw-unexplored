@@ -1,253 +1,92 @@
 # BotW Unexplored
 
-**BotW Unexplored** — homebrew-приложение для Nintendo Switch, которое показывает прямо на консоли, что ещё осталось найти в сохранении **The Legend of Zelda: Breath of the Wild**.
+BotW Unexplored is a Nintendo Switch homebrew map companion for *The Legend of Zelda: Breath of the Wild*. It reads the selected local save (or a previously created backup while the game is running) and shows collectible progress directly on the console.
 
-На интерактивной карте отображаются ещё не найденные:
+This repository is the maintained fork of [lud99/botw-unexplored](https://github.com/lud99/botw-unexplored). The current fork release is **v2.2.0**.
 
-* короки;
-* локации;
-* святилища, включая святилища DLC при наличии дополнения;
-* хиноксы;
-* глыбники (Stone Talus);
-* молдоры.
+## Features
 
-Приложение анализирует сохранение игры непосредственно на Nintendo Switch — переносить сохранение на компьютер и пользоваться внешними сайтами не требуется.
+- English, Russian, and Spanish user interfaces. Russian Korok hints and location names use the Switch localization data.
+- Koroks, shrines, DLC shrines, locations, Hinoxes, Taluses, and Moldugas.
+- Normal Mode and Master Mode, including save-backup support when BotW is running.
+- A localized object information card with type, name where available, game coordinates, icon, and completion state.
+- Existing Korok hints, guide images, and route rendering remain available through touch selection.
+- `Missing`, `Completed`, and `All` display modes for every category.
+- Per-profile and per-mode manual progress for every supported object type. It never modifies the BotW save.
+- Controller cursor: D-Pad moves the cursor, `A` opens the nearest visible object, and `ZR` smoothly focuses the nearest missing visible object.
+- Persisted camera, zoom, legend visibility, display mode, and language. Legacy settings are migrated safely.
 
-<img width="700" alt="cedf228f8aa561134946f752ee9c959b" src="https://github.com/user-attachments/assets/a0e80475-06b5-463a-85ec-332a9728d324" /><img width="700" alt="37e014df95ace2d5a476fca3911ee462" src="https://github.com/user-attachments/assets/4749ea06-032e-4429-9b8d-4f160df063eb" />
-<img width="700" alt="43a337201433fdf7f55a36c1b8aa0aaa" src="https://github.com/user-attachments/assets/d423db5e-5a36-45e4-a668-370fad32b988" />
+## Installation
 
-**Внимание! Скриншоты сделаны и изначальной версии и не отображают последней версии!**
+1. Download `botw-unexplored.nro` from [Releases](https://github.com/sklart/botw-unexplored/releases).
+2. Copy it to `sdmc:/switch/botw-unexplored/botw-unexplored.nro`.
+3. Start it from the Homebrew Menu and select the Switch profile that owns the BotW save.
 
-## О проекте
+For backup-based use while BotW is running, start BotW Unexplored once with the game closed first. This creates a backup of the selected save.
 
-Этот репозиторий является развитием оригинального проекта [lud99/botw-unexplored](https://github.com/lud99/botw-unexplored).
+## Controls
 
-В данной версии добавлена полноценная локализация, в том числе русский интерфейс, русский перевод подсказок для поиска короков и названия игровых локаций, соответствующие официальной русской локализации Breath of the Wild для Nintendo Switch.
+| Context | Control | Action |
+| --- | --- | --- |
+| Map | Left stick or touch drag | Move the map |
+| Map | Right-stick Y, `L` / `R` | Zoom |
+| Map | `X` | Open or close the legend / close an information panel |
+| Map | `Y` | Switch Normal Mode / Master Mode when available |
+| Map | `-` | Choose another profile |
+| Map | `+` | Exit |
+| Map | D-Pad | Move the controller cursor |
+| Map | `A` | Open the nearest object at the cursor |
+| Map | `ZR` | Smoothly focus the nearest missing visible object |
+| Object info | `B` | Mark a missing object as found while using a backup |
+| Legend | D-Pad, `A`, or touch | Select/toggle a category or cycle display mode |
+| Legend | `ZL` | Switch language |
+| Korok hint | `B` | Mark the Korok as found while using a backup and close the hint |
 
-В выпуске **v1.0.1** исправлена регрессия запуска: вместо предварительного создания более 1 200 текстур шрифта глифы теперь загружаются только при необходимости. Полная поддержка Unicode сохранена, а в `sdmc:/switch/botw-unexplored/log.txt` добавлены диагностические записи запуска.
+## Saved data
 
-Оригинальные возможности BotW Unexplored сохранены.
+The app stores its own files under `sdmc:/switch/botw-unexplored/`:
 
-## Возможности
+- `settings.txt` is a versioned settings file. Older settings files are accepted and rewritten in the current format.
+- `language.txt` remains for compatibility with earlier releases.
+- `manual_progress.dat` is a versioned manual-progress file. Entries are keyed by Switch profile, Normal/Master Mode, object type, and completion hash. A completion later confirmed by a readable game save removes the corresponding override.
 
-* Отображение на карте только тех объектов, которые ещё не найдены в текущем сохранении.
-* Отдельное включение и отключение различных типов объектов через легенду.
-* Отображение уже найденных объектов при необходимости.
-* Поддержка обычного режима и **Master Mode**.
-* Поддержка святилищ DLC.
-* Подробные подсказки по поиску короков.
-* Отображение маршрутов для короков, для которых требуется перемещение из одной точки в другую.
-* Возможность вручную отметить корока найденным.
-* Работа приложения во время запущенной Breath of the Wild с использованием резервной копии сохранения.
-* Запоминание положения карты и масштаба.
-* Автоматический выбор последнего использованного профиля.
-* Работа с сенсорным экраном и контроллерами Joy-Con / Pro Controller.
-* Оптимизированное отображение большого количества объектов с частотой до 60 FPS.
-* Сохранение диагностического журнала при возникновении ошибок.
+No file in this directory changes the actual BotW save.
 
-## Русская локализация
+## Build
 
-В этой версии добавлена система локализации с поддержкой:
-
-* **English**
-* **Русский**
-* **Español**
-
-Переключение языка выполняется кнопкой **ZL**, когда открыта легенда.
-
-Выбранный язык сохраняется в:
-
-```text
-sdmc:/switch/botw-unexplored/language.txt
-```
-
-и автоматически восстанавливается при следующем запуске.
-
-### Названия локаций
-
-Русские названия игровых локаций не являются произвольным переводом английских строк.
-
-Все **187 названий локаций** сопоставляются с официальными сообщениями английской и русской версий Breath of the Wild для Nintendo Switch:
-
-```text
-Msg_USen.product.ssarc
-Msg_EUru.product.ssarc
-```
-
-Английское название связывается с внутренним ID сообщения игры, после чего по этому же ID выбирается официальная русская строка.
-
-Благодаря этому используются именно те названия, которые встречаются в русской версии игры.
-
-Исходные игровые архивы в репозиторий не включаются.
-
-Инструмент для повторной генерации таблицы находится в каталоге [`tools`](tools/README.md).
-
-## Установка
-
-1. Загрузите `botw-unexplored.nro` из раздела [Releases](https://github.com/sklart/botw-unexplored/releases).
-2. Скопируйте файл на SD-карту Nintendo Switch, например:
-
-```text
-/switch/botw-unexplored/botw-unexplored.nro
-```
-
-3. Запустите приложение через Homebrew Menu.
-4. Выберите профиль пользователя с сохранением Breath of the Wild.
-
-Для корректной работы во время запущенной BotW сначала рекомендуется хотя бы один раз запустить BotW Unexplored при закрытой игре. Это позволит приложению подготовить резервную копию сохранения.
-
-## Управление
-
-### Карта
-
-* **Левый аналоговый стик / сенсорный экран** — перемещение по карте.
-* **L / R** — изменение масштаба.
-* **X** — открыть или закрыть легенду.
-* **Y** — переключение между обычным режимом и Master Mode.
-* **−** — выбор профиля.
-* **+** — выход.
-
-### Легенда
-
-* **D-Pad вверх/вниз** — выбор пункта.
-* **A** — включить или отключить выбранный тип объектов.
-* **ZL** — переключить язык.
-* **X** — закрыть легенду.
-* Также поддерживается управление сенсорным экраном.
-
-### Короки
-
-Нажмите на корока на карте, чтобы открыть подсказку по его поиску.
-
-Если Breath of the Wild запущена одновременно с приложением, BotW Unexplored не может прочитать самые свежие данные сохранения. В этом случае найденного во время текущей игровой сессии корока можно временно отметить вручную кнопкой **B**.
-
-После того как приложение снова сможет прочитать актуальное сохранение, состояние будет синхронизировано с игрой.
-
-## Почему отдельное приложение для Switch?
-
-Существуют сайты и программы, способные анализировать сохранения Breath of the Wild, однако обычно для этого требуется:
-
-1. создать резервную копию сохранения;
-2. перенести её на компьютер;
-3. открыть во внешнем приложении или браузере.
-
-BotW Unexplored выполняет эту работу непосредственно на Nintendo Switch и позволяет переключаться между игрой и картой значительно быстрее.
-
-## Сборка
-
-Для сборки требуется установленная среда devkitPro / devkitA64 и библиотеки:
-
-```text
-switch-mesa
-switch-glad
-switch-freetype
-switch-glm
-```
-
-Установка зависимостей:
+Install devkitPro/devkitA64 and the Switch packages:
 
 ```bash
 pacman -S switch-mesa switch-glad switch-glm switch-freetype
 ```
 
-После этого выполните:
+Then build:
 
 ```bash
 make
 ```
 
-Результатом будет файл `.nro`.
+`make DEBUG=1` enables per-frame OpenGL diagnostics. The release build does not poll `glGetError()` every frame.
 
-## Генерация русских названий локаций
+The project uses `aarch64-none-elf-pkg-config` for FreeType when available and retains a tested fallback for older devkitPro installations.
 
-Инструменты находятся в каталоге:
+## Tests and CI
 
-```text
-tools/
-```
-
-Для генерации используются архивы сообщений из собственной копии Breath of the Wild для Nintendo Switch.
-
-Ожидаемая структура:
-
-```text
-localization_sources/base/Bootup_USen/Message/Msg_USen.product.ssarc
-localization_sources/base/Bootup_EUru/Message/Msg_EUru.product.ssarc
-```
-
-Генерация:
+Run the host-side checks with:
 
 ```bash
-python tools/generate_location_localization.py \
-  --en localization_sources/base/Bootup_USen/Message/Msg_USen.product.ssarc \
-  --ru localization_sources/base/Bootup_EUru/Message/Msg_EUru.product.ssarc
+bash tests/run_host_tests.sh
 ```
 
-Проверка уже сгенерированных данных:
+They cover settings migration and validation, UTF-8 decoding, manual-progress profile/mode/type separation, object metadata mapping, data counts, and duplicate completion hashes. GitHub Actions also builds the Switch `.nro` and uploads it as an artifact.
 
-```bash
-python tools/generate_location_localization.py \
-  --en localization_sources/base/Bootup_USen/Message/Msg_USen.product.ssarc \
-  --ru localization_sources/base/Bootup_EUru/Message/Msg_EUru.product.ssarc \
-  --check
-```
+## Localization sources
 
-Игровые архивы намеренно исключены из Git.
+The location-localization generator is in [`tools`](tools/README.md). It expects message archives extracted from a lawfully obtained Switch copy of the game; those game files are deliberately ignored by Git and are not distributed by this repository.
 
-## История проекта
+## Credits
 
-### 2.1.0 — русская локализация
+- [lud99/botw-unexplored](https://github.com/lud99/botw-unexplored) — original application and codebase.
+- [marcrobledo/savegame-editors](https://github.com/marcrobledo/savegame-editors), [MrCheeze/botw-waypoint-map](https://github.com/MrCheeze/botw-waypoint-map), [Zelda Dungeon](https://www.zeldadungeon.net/), and [d4mation/botw-unexplored-viewer](https://github.com/d4mation/botw-unexplored-viewer) — original data, research, and guide references.
 
-* Добавлена полноценная русская локализация интерфейса.
-* Добавлен русский перевод подсказок по поиску короков.
-* Добавлены официальные русские названия всех 187 отображаемых локаций.
-* Добавлена поддержка UTF-8 и кириллицы в системе вывода текста.
-* Добавлено переключение между английским, русским и испанским языками.
-* Выбранный язык теперь сохраняется между запусками.
-* Добавлен генератор таблицы локализации из официальных архивов сообщений Nintendo Switch.
-* Добавлены проверки генератора локализации.
-* Обновлена конфигурация сборки FreeType.
-
-### 2.0 — оригинальный проект
-
-В оригинальной версии 2.0 были добавлены:
-
-* святилища, включая DLC;
-* хиноксы, глыбники и молдоры;
-* легенда и фильтрация объектов;
-* возможность пользоваться приложением во время игры;
-* подсказки и изображения для поиска короков;
-* маршруты короков;
-* ручная отметка найденных короков;
-* поддержка Master Mode;
-* значительное повышение производительности;
-* сохранение положения и масштаба карты;
-* автоматический выбор последнего профиля;
-* расширенное журналирование ошибок.
-
-### 1.0 — оригинальный проект
-
-Первая версия BotW Unexplored.
-
-## Благодарности
-
-Проект основан на оригинальном **BotW Unexplored**:
-
-* [lud99/botw-unexplored](https://github.com/lud99/botw-unexplored) — оригинальное приложение и основная кодовая база.
-
-Также оригинальный автор проекта выражал благодарность:
-
-* [marcrobledo/savegame-editors](https://github.com/marcrobledo/savegame-editors) — данные и идеи, использованные при создании проекта;
-* [MrCheeze/botw-waypoint-map](https://github.com/MrCheeze/botw-waypoint-map) — данные о расположении игровых объектов;
-* [Zelda Dungeon](https://www.zeldadungeon.net/) — материалы и изображения для подсказок по поиску короков;
-* [d4mation/botw-unexplored-viewer](https://github.com/d4mation/botw-unexplored-viewer) — код и исследования, связанные с разбором сохранений.
-
-Отдельная благодарность **d4mation** за предложения, сообщения об ошибках и помощь оригинальному автору в исследовании Breath of the Wild.
-
-## Примечание
-
-BotW Unexplored является неофициальным homebrew-проектом и не связан с Nintendo.
-
-**The Legend of Zelda**, **Breath of the Wild** и **Nintendo Switch** являются товарными знаками их соответствующих правообладателей.
-
-Игровые файлы и архивы локализации в составе репозитория не распространяются.
+BotW Unexplored is an unofficial homebrew project and is not affiliated with Nintendo.

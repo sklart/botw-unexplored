@@ -86,5 +86,4 @@ MapLocation::~MapLocation()
     
 }
 
-bool MapLocation::m_ShowAnyway = false;
 std::vector<glm::vec4> MapLocation::m_LabelBounds;

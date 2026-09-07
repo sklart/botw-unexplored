@@ -29,7 +29,7 @@ AccountUid Accounts::RequestProfileSelection()
     struct UserReturnData{
         u64 result;
         AccountUid UID;
-    } PACKED;
+    };
 
     struct UserReturnData outdata;
 

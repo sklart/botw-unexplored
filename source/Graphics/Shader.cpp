@@ -2,11 +2,13 @@
 
 #include <glad/glad.h>
 
+#include <algorithm>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <fstream>
 #include <stdio.h>
 #include <sstream>
+#include <vector>
 #include "../Log.h"
 
 Shader::Shader()
@@ -167,13 +169,12 @@ unsigned int ShaderLoader::CompileShader(unsigned int type, const std::string& s
 		int length;
 		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
 
-		// Create char array
-		char* message = new char[length];
+		std::vector<char> message(static_cast<size_t>(std::max(length, 1)));
 
-		glGetShaderInfoLog(id, length, &length, message); // Get the actual message
+		glGetShaderInfoLog(id, length, &length, message.data()); // Get the actual message
 
 		Log("Failed to compile shader", source);
-		Log(message);
+		Log(message.data());
 
 		glDeleteShader(id);
 

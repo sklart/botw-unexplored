@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 compiler="${CXX:-g++}"
-"$compiler" -std=c++14 -Wall -Wextra -pedantic -Isource tests/test_settings.cpp source/Settings.cpp source/Utf8.cpp -o /tmp/test_settings
+sanitizers=()
+if [[ "${SANITIZE:-0}" == "1" ]]; then
+    sanitizers=(-fsanitize=address,undefined -fno-omit-frame-pointer)
+fi
+"$compiler" -std=c++14 -Wall -Wextra -pedantic "${sanitizers[@]}" -Isource tests/test_settings.cpp source/Settings.cpp source/Utf8.cpp -o /tmp/test_settings
 /tmp/test_settings
-"$compiler" -std=c++14 -Wall -Wextra -pedantic -Isource tests/test_manual_progress.cpp source/ManualProgress.cpp -o /tmp/test_manual_progress
+"$compiler" -std=c++14 -Wall -Wextra -pedantic "${sanitizers[@]}" -Isource tests/test_manual_progress.cpp source/ManualProgress.cpp -o /tmp/test_manual_progress
 /tmp/test_manual_progress
+"$compiler" -std=c++14 -Wall -Wextra -pedantic "${sanitizers[@]}" -Isource tests/test_object_model.cpp source/ObjectModel.cpp -o /tmp/test_object_model
+/tmp/test_object_model
+python3 tests/test_data_mapping.py

@@ -360,6 +360,8 @@ void Map::Update()
 
             // Dont drag if finger is on the legend
             if (!(m_Legend->m_IsOpen && m_Legend->IsPositionOnLegend(touchPosition)) &&
+                !m_KorokDialog->m_IsOpen &&
+                !m_ObjectInfo->m_IsOpen &&
                 !(m_NoSavefileDialog->m_IsOpen && m_NoSavefileDialog->IsPositionOn(touchPosition)) &&
                 !(m_GameRunningDialog->m_IsOpen && m_GameRunningDialog->IsPositionOn(touchPosition)) &&
                 !(m_MasterModeDialog->m_IsOpen && m_MasterModeDialog->IsPositionOn(touchPosition)))
@@ -450,7 +452,6 @@ void Map::Update()
         for (int i = 0; i < Data::LocationsCount; i++)
             m_Locations[i].Update();
 
-        MapLocation::m_ShowAnyway = m_Legend->m_ShowMode == ShowMode::All;
     }
 
     m_PrevCameraPosition = m_CameraPosition;
@@ -656,8 +657,9 @@ void Map::OpenNearestObject(const glm::vec2& mapPosition)
         consider(Data::ObjectType::Korok, Data::Koroks[i].hash, m_Koroks[i].m_Position, "", &m_Koroks[i].m_Found);
     for (int i = 0; i < Data::ShrineCount; ++i)
         consider(Data::ObjectType::Shrine, Data::Shrines[i].hash, m_Shrines[i].m_Position, Data::Shrines[i].displayName, &m_Shrines[i].m_Found);
-    for (int i = 0; i < Data::DLCShrineCount; ++i)
-        consider(Data::ObjectType::DLCShrine, Data::DLCShrines[i].hash, m_DLCShrines[i].m_Position, "", &m_DLCShrines[i].m_Found);
+    if (SavefileIO::HasDLC)
+        for (int i = 0; i < Data::DLCShrineCount; ++i)
+            consider(Data::ObjectType::DLCShrine, Data::DLCShrines[i].hash, m_DLCShrines[i].m_Position, "", &m_DLCShrines[i].m_Found);
     for (int i = 0; i < Data::HinoxesCount; ++i)
         consider(Data::ObjectType::Hinox, Data::Hinoxes[i].hash, m_Hinoxes[i].m_Position, "", &m_Hinoxes[i].m_Found);
     for (int i = 0; i < Data::TalusesCount; ++i)

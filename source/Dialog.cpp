@@ -99,7 +99,7 @@ bool Dialog::IsPositionOn(glm::vec2 position)
 {
     if (position.x > m_Position.x - m_Width / 2.0f && position.x < m_Position.x + m_Width / 2.0f)
     {
-        if (position.y > m_Position.x - m_Height / 2.0f && position.y < m_Position.x + m_Height / 2.0f)
+        if (position.y > m_Position.y - m_Height / 2.0f && position.y < m_Position.y + m_Height / 2.0f)
             return true;
     }
 
@@ -253,7 +253,10 @@ void Dialog::SetOpen(bool open)
 
 Dialog::~Dialog()
 {
-
+    delete m_ChooseProfileButton;
+    m_ChooseProfileButton = nullptr;
+    delete m_ExitButton;
+    m_ExitButton = nullptr;
 }
 
 
@@ -307,7 +310,6 @@ void Button::Render()
     m_Button.Render();
     if (m_IsSelected) m_Border.Render();
 
-    float mainTextMargin = 35.0f;
     glm::vec2 mainTextPosition(
         m_Position.x + m_Width / 2,
         m_Position.y - (m_Height / 1.65f)
@@ -338,6 +340,10 @@ bool Button::Click(bool toggled)
     //     m_Button.m_Color = Button::DefaultColor;
 
     return m_IsToggled;
+}
+
+Button::~Button()
+{
 }
 
 constexpr glm::vec4 Button::HighlightedColor;

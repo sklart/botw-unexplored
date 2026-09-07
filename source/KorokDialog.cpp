@@ -109,5 +109,6 @@ glm::vec2 KorokDialog::GetPosition()
 
 KorokDialog::~KorokDialog()
 {
-
+    delete m_Image;
+    m_Image = nullptr;
 }
