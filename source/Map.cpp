@@ -18,6 +18,7 @@
 #include "Localization.h"
 #include "ManualProgress.h"
 #include "Navigation.h"
+#include "ModeChangeDecision.h"
 
 #include "SavefileIO.h"
 
@@ -261,10 +262,11 @@ void Map::Update()
     {
         if (SavefileIO::LoadedSavefile)
         {
-            m_LoadMasterMode = false;
-
-            SavefileIO::LoadGamesave(false, true);
-            UpdateMapObjects();
+            if (SavefileIO::LoadGamesave(false, true))
+            {
+                m_LoadMasterMode = ModeChangeDecision::Resolve(m_LoadMasterMode, false, true);
+                UpdateMapObjects();
+            }
         }
     }
 
@@ -291,10 +293,12 @@ void Map::Update()
     {
         if (SavefileIO::MostRecentMasterModeFile != -1)
         {
-            m_LoadMasterMode = !m_LoadMasterMode;
-
-            SavefileIO::LoadGamesave(m_LoadMasterMode);
-            UpdateMapObjects();
+            const bool requestedMode = !m_LoadMasterMode;
+            if (SavefileIO::LoadGamesave(requestedMode))
+            {
+                m_LoadMasterMode = ModeChangeDecision::Resolve(m_LoadMasterMode, requestedMode, true);
+                UpdateMapObjects();
+            }
         }
     }
 

@@ -318,10 +318,13 @@ int main()
         if (hasDoneFirstDraw && !hasLoadedSave)
         {
             hasLoadedSave = true;
-            Log("LoadGamesave() status:", SavefileIO::LoadGamesave() ? "true" : "false");
-
-            Map::UpdateMapObjects();
-            MigrateLegacyKorokProgress();
+            const bool loadSucceeded = SavefileIO::LoadGamesave();
+            Log("LoadGamesave() status:", loadSucceeded ? "true" : "false");
+            if (loadSucceeded)
+            {
+                Map::UpdateMapObjects();
+                MigrateLegacyKorokProgress();
+            }
 
         }
 

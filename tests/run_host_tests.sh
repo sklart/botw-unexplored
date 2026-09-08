@@ -15,6 +15,8 @@ fi
 /tmp/test_object_model
 "$compiler" -std=c++14 -Wall -Wextra -pedantic "${sanitizers[@]}" -Isource tests/test_save_load_decision.cpp source/SaveLoadDecision.cpp -o /tmp/test_save_load_decision
 /tmp/test_save_load_decision
+"$compiler" -std=c++14 -Wall -Wextra -pedantic "${sanitizers[@]}" -Isource tests/test_mode_change_decision.cpp source/ModeChangeDecision.cpp -o /tmp/test_mode_change_decision
+/tmp/test_mode_change_decision
 "$compiler" -std=c++14 -Wall -Wextra -pedantic "${sanitizers[@]}" -Isource tests/test_navigation.cpp source/Navigation.cpp -o /tmp/test_navigation
 /tmp/test_navigation
 "$compiler" -std=c++14 -Wall -Wextra -pedantic "${sanitizers[@]}" -Isource tests/test_localization.cpp source/Localization.cpp -o /tmp/test_localization
