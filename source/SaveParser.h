@@ -11,6 +11,7 @@ namespace SaveParser
     constexpr size_t HeaderSize = 0x0c;
     constexpr size_t RecordSize = 8;
     constexpr size_t MinimumRecordCount = 32;
+    constexpr size_t SupportedTrailingDataSize = 4;
 
     struct Record
     {

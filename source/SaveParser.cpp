@@ -13,7 +13,13 @@ namespace
 
 bool SaveParser::ParseSaveBuffer(const uint8_t* data, size_t size, ParsedSaveState& result)
 {
-    if (data == nullptr || size < HeaderSize || (size - HeaderSize) % RecordSize != 0)
+    if (data == nullptr || size < HeaderSize)
+        return false;
+
+    const size_t trailingDataSize = (size - HeaderSize) % RecordSize;
+    // Switch game_data.sav files may end with a four-byte trailer. Other partial
+    // record sizes cannot be distinguished from corruption and are rejected.
+    if (trailingDataSize != 0 && trailingDataSize != SupportedTrailingDataSize)
         return false;
 
     const size_t recordCount = (size - HeaderSize) / RecordSize;
@@ -25,7 +31,7 @@ bool SaveParser::ParseSaveBuffer(const uint8_t* data, size_t size, ParsedSaveSta
     bool foundPlaytime = false;
     size_t nonZeroHashCount = 0;
 
-    for (size_t offset = HeaderSize; offset < size; offset += RecordSize)
+    for (size_t offset = HeaderSize; offset + RecordSize <= size; offset += RecordSize)
     {
         const Record record = {ReadU32(data, offset), ReadU32(data, offset + 4)};
         candidate.records.push_back(record);

@@ -43,6 +43,12 @@ int main()
     assert(parsed.hasDLC);
     assert(parsed.records.size() == SaveParser::MinimumRecordCount);
 
+    std::vector<uint8_t> representativeWithTrailer = representative;
+    AppendU32(representativeWithTrailer, 0xdeadbeef);
+    assert(SaveParser::ParseSaveBuffer(representativeWithTrailer.data(), representativeWithTrailer.size(), parsed));
+    assert(parsed.playtime == 12345);
+    assert(parsed.records.size() == SaveParser::MinimumRecordCount);
+
     std::vector<uint8_t> random(SaveParser::HeaderSize + SaveParser::RecordSize * SaveParser::MinimumRecordCount, 0xa5);
     assert(!SaveParser::ParseSaveBuffer(random.data(), random.size(), parsed));
 
@@ -58,12 +64,17 @@ int main()
     assert(!SaveParser::ParseSaveBuffer(truncatedAfterPlaytime.data(), truncatedAfterPlaytime.size(), parsed));
 
     std::vector<uint8_t> truncatedMiddleRecord = MakeValidBuffer(false);
-    truncatedMiddleRecord.resize(truncatedMiddleRecord.size() - 4);
+    truncatedMiddleRecord.resize(truncatedMiddleRecord.size() - 5);
     assert(!SaveParser::ParseSaveBuffer(truncatedMiddleRecord.data(), truncatedMiddleRecord.size(), parsed));
 
     std::vector<uint8_t> malformedAlignment = MakeValidBuffer(false);
     malformedAlignment.push_back(0);
     assert(!SaveParser::ParseSaveBuffer(malformedAlignment.data(), malformedAlignment.size(), parsed));
+
+    std::vector<uint8_t> anomalousTrailer = MakeValidBuffer(false);
+    anomalousTrailer.push_back(0);
+    anomalousTrailer.push_back(0);
+    assert(!SaveParser::ParseSaveBuffer(anomalousTrailer.data(), anomalousTrailer.size(), parsed));
 
     const std::vector<uint8_t> unknownHashes = MakeValidBuffer(false);
     assert(SaveParser::ParseSaveBuffer(unknownHashes.data(), unknownHashes.size(), parsed));
