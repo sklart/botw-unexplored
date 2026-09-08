@@ -63,8 +63,6 @@ namespace SavefileIO
 
     bool LoadGamesave(bool loadMasterMode = false, bool chooseProfile = false);
 
-    uint32_t ReadU32(const uint8_t* buffer, size_t offset);
-
     SaveLoadDecision::MountStatus MountSavefile(bool openProfilePicker, SaveState& candidate);
     bool UnmountSavefile();
 

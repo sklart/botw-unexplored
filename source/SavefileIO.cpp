@@ -14,13 +14,28 @@
 #include "Dialog.h"
 #include "Log.h"
 #include "SaveLoadDecision.h"
-#include "SaveStateTransaction.h"
+#include "SaveParser.h"
 
 namespace
 {
     bool saveMounted = false;
 
     bool ParseFileIntoState(const char* filepath, SavefileIO::ParsedSaveState& parsedState);
+
+    bool ReadFileBuffer(const char* filepath, std::vector<uint8_t>& buffer)
+    {
+        if (!SavefileIO::FileExists(filepath))
+            return false;
+
+        std::ifstream file(filepath, std::ios::binary | std::ios::ate);
+        const std::streamoff length = file.tellg();
+        if (!file || length < 0 || length > static_cast<std::streamoff>(std::numeric_limits<uint32_t>::max()))
+            return false;
+
+        buffer.resize(static_cast<size_t>(length));
+        file.seekg(0, std::ios::beg);
+        return static_cast<bool>(file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(buffer.size())));
+    }
 
     void ApplyParsedState(SavefileIO::SaveState& state, const SavefileIO::ParsedSaveState& parsedState)
     {
@@ -29,7 +44,7 @@ namespace
 
     void CommitState(const SavefileIO::SaveState& candidate)
     {
-        SaveStateTransaction::Commit(SavefileIO::CurrentState, candidate, true);
+        SavefileIO::CurrentState = candidate;
     }
 
     class SaveMountGuard
@@ -127,14 +142,6 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
 
     Log("Unable to access account or profile picker");
     return false;
-}
-
-uint32_t SavefileIO::ReadU32(const uint8_t* buffer, size_t offset)
-{
-    return static_cast<uint32_t>(buffer[offset]) |
-           (static_cast<uint32_t>(buffer[offset + 1]) << 8) |
-           (static_cast<uint32_t>(buffer[offset + 2]) << 16) |
-           (static_cast<uint32_t>(buffer[offset + 3]) << 24);
 }
 
 SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker, SaveState& candidate)
@@ -389,40 +396,11 @@ bool SavefileIO::LoadBackup(bool masterMode, SaveState& candidate)
 
 uint32_t SavefileIO::GetSavefilePlaytime(const std::string& filepath)
 {
-    if (!SavefileIO::FileExists(filepath))
+    std::vector<uint8_t> buffer;
+    SaveParser::ParsedSaveState parsedState;
+    if (!ReadFileBuffer(filepath.c_str(), buffer) || !SaveParser::ParseSaveBuffer(buffer.data(), buffer.size(), parsedState))
         return 0;
-
-    std::ifstream file;
-    file.open(filepath, std::ios::binary);
-
-    // Get length of file
-    file.seekg(0, file.end);
-    const std::streamoff length = file.tellg();
-    if (length <= 0 || length > static_cast<std::streamoff>(std::numeric_limits<uint32_t>::max()))
-        return 0;
-    const size_t fileSize = static_cast<size_t>(length);
-    file.seekg(0, file.beg);
-
-    std::vector<uint8_t> buffer(fileSize);
-    if (!file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(fileSize)))
-        return 0;
-
-    uint32_t playtimeHash = 0x73c29681;
-    
-    // Iterate to find the location of the hash
-    uint32_t playtime = 0;
-    for (size_t offset = 0x0c; offset + 8 <= fileSize; offset += 8)
-    {
-        // Read the hash
-        uint32_t hashValue = SavefileIO::ReadU32(buffer.data(), offset);
-        if (hashValue == playtimeHash)
-        {
-            playtime = ReadU32(buffer.data(), offset + 4);
-            break;
-        }
-    }
-
-    return playtime;
+    return parsedState.playtime;
 }
 
 int SavefileIO::GetMostRecentSavefile(const std::string& dir, bool masterMode)
@@ -581,40 +559,22 @@ bool ParseFileIntoState(const char *filepath, SavefileIO::ParsedSaveState& parse
 {
     Log("Opening savefile", filepath);
 
-    if (!SavefileIO::FileExists(filepath))
+    std::vector<uint8_t> buffer;
+    SaveParser::ParsedSaveState bufferState;
+    if (!ReadFileBuffer(filepath, buffer) || !SaveParser::ParseSaveBuffer(buffer.data(), buffer.size(), bufferState))
         return false;
 
-    std::ifstream file;
-    file.open(filepath, std::ios::binary);
-
-    // Get length of file
-    file.seekg(0, file.end);
-    const std::streamoff length = file.tellg();
-    if (length < 0 || length > static_cast<std::streamoff>(std::numeric_limits<uint32_t>::max()))
-        return false;
-    const size_t fileSize = static_cast<size_t>(length);
-    if (fileSize < 0x14)
-        return false;
-    file.seekg(0, file.beg);
-
-    std::vector<uint8_t> buffer(fileSize);
-    if (!file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(fileSize)))
-        return false;
-
-    // Based on https://github.com/d4mation/botw-unexplored-viewer/blob/master/assets/js/zelda-botw.js
-
-    // Iterate through the entire savefile to find the korok seed and location hashes
-    for (size_t offset = 0x0c; offset + 8 <= fileSize; offset += 8)
+    for (const SaveParser::Record& record : bufferState.records)
     {
-        // Read the korok or location hash ('id')
-        uint32_t hashValue = SavefileIO::ReadU32(buffer.data(), offset);
+        const uint32_t hashValue = record.hash;
+        const uint32_t value = record.value;
 
         // Check if a korok with the hash exists
         Data::Korok *korok = Data::KorokExists(hashValue);
         if (korok)
         {
             // Read the 4 bytes after the hash. If it's not 0, then the seed has been found.
-            bool found = SavefileIO::ReadU32(buffer.data(), offset + 4) != 0;
+            bool found = value != 0;
 
             found ? parsedState.foundKoroks.push_back(korok) : parsedState.missingKoroks.push_back(korok);
         }
@@ -625,7 +585,7 @@ bool ParseFileIntoState(const char *filepath, SavefileIO::ParsedSaveState& parse
         if (shrine)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the shrine has been found.
-            bool defeated = SavefileIO::ReadU32(buffer.data(), offset + 4) != 0;
+            bool defeated = value != 0;
 
             defeated ? parsedState.foundShrines.push_back(shrine) : parsedState.missingShrines.push_back(shrine);
         }
@@ -635,7 +595,7 @@ bool ParseFileIntoState(const char *filepath, SavefileIO::ParsedSaveState& parse
         if (dlcShrine)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the shrine has been found.
-            bool defeated = SavefileIO::ReadU32(buffer.data(), offset + 4) != 0;
+            bool defeated = value != 0;
 
             defeated ? parsedState.foundDLCShrines.push_back(dlcShrine) : parsedState.missingDLCShrines.push_back(dlcShrine);
         }
@@ -645,7 +605,7 @@ bool ParseFileIntoState(const char *filepath, SavefileIO::ParsedSaveState& parse
         if (location)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the location has been visited.
-            bool visited = SavefileIO::ReadU32(buffer.data(), offset + 4) != 0;
+            bool visited = value != 0;
 
             visited ? parsedState.visitedLocations.push_back(location) : parsedState.unexploredLocations.push_back(location);
         }
@@ -655,7 +615,7 @@ bool ParseFileIntoState(const char *filepath, SavefileIO::ParsedSaveState& parse
         if (hinox)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the hinox has been defeated.
-            bool defeated = SavefileIO::ReadU32(buffer.data(), offset + 4) != 0;
+            bool defeated = value != 0;
 
             defeated ? parsedState.defeatedHinoxes.push_back(hinox) : parsedState.undefeatedHinoxes.push_back(hinox);
         }
@@ -665,7 +625,7 @@ bool ParseFileIntoState(const char *filepath, SavefileIO::ParsedSaveState& parse
         if (talus)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the talus has been defeated.
-            bool defeated = SavefileIO::ReadU32(buffer.data(), offset + 4) != 0;
+            bool defeated = value != 0;
 
             defeated ? parsedState.defeatedTaluses.push_back(talus) : parsedState.undefeatedTaluses.push_back(talus);
         }
@@ -675,18 +635,15 @@ bool ParseFileIntoState(const char *filepath, SavefileIO::ParsedSaveState& parse
         if (molduga)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the molduga has been defeated.
-            bool defeated = SavefileIO::ReadU32(buffer.data(), offset + 4) != 0;
+            bool defeated = value != 0;
 
             defeated ? parsedState.defeatedMoldugas.push_back(molduga) : parsedState.undefeatedMoldugas.push_back(molduga);
         }
 
-        // Check if has the dlc
-        uint32_t BalladOfHeroes_Ready = 1186840637; // Set to true if the DLC is owned
-        if (hashValue == BalladOfHeroes_Ready) {
-            parsedState.hasDLC = SavefileIO::ReadU32(buffer.data(), offset + 4) == 1;
-            Log("User has DLC:", parsedState.hasDLC ? "true" : "false");
-        }
     }
+
+    parsedState.hasDLC = bufferState.hasDLC;
+    Log("User has DLC:", parsedState.hasDLC ? "true" : "false");
 
     Log("Successfully parsed file", filepath);
 
