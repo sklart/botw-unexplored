@@ -14,10 +14,23 @@
 #include "Dialog.h"
 #include "Log.h"
 #include "SaveLoadDecision.h"
+#include "SaveStateTransaction.h"
 
 namespace
 {
     bool saveMounted = false;
+
+    bool ParseFileIntoState(const char* filepath, SavefileIO::ParsedSaveState& parsedState);
+
+    void ApplyParsedState(SavefileIO::SaveState& state, const SavefileIO::ParsedSaveState& parsedState)
+    {
+        static_cast<SavefileIO::ParsedSaveState&>(state) = parsedState;
+    }
+
+    void CommitState(const SavefileIO::SaveState& candidate)
+    {
+        SaveStateTransaction::Commit(SavefileIO::CurrentState, candidate, true);
+    }
 
     class SaveMountGuard
     {
@@ -39,52 +52,44 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
     Log("Loading gamesave. Master mode: " + std::string(loadMasterMode ? "true" : "false") + 
        ", Choose profile (instead of automatic): " + std::string(chooseProfile ? "true" : "false"));
 
-    // Try to mount the save directory
-    const SaveLoadDecision::MountStatus mountStatus = MountSavefile(chooseProfile);
-
-    Map::m_GameRunningDialog->SetOpen(false);
-    Map::m_MasterModeDialog->SetOpen(false);
-    Map::m_NoSavefileDialog->SetOpen(false);
+    SaveState candidate = CurrentState;
+    const SaveLoadDecision::MountStatus mountStatus = MountSavefile(chooseProfile, candidate);
 
     Log("Mount status:", static_cast<int>(mountStatus));
 
     if (mountStatus == SaveLoadDecision::MountStatus::Success)
     {
         SaveMountGuard mountGuard(true);
-        if (loadMasterMode)
+        const int saveSlot = loadMasterMode ? candidate.mostRecentMasterModeFile : candidate.mostRecentNormalModeFile;
+        if (saveSlot == -1)
         {
-            bool success = false;
-            if (MasterModeFileExists) 
-            {
-                std::string path = "save:/" + std::to_string(MostRecentMasterModeFile) + "/game_data.sav";
-                success = ParseFile(path.c_str());
-                if (!success)
-                    Log("Mastermode savefile failed to parse");
-            }
-
-            MasterModeFileLoaded = success;
-            const SaveLoadDecision::Outcome outcome = SaveLoadDecision::Resolve(mountStatus, true, success);
-            LoadedSavefile = outcome.loadedSavefile;
-            return outcome.success;
-        }
-        MasterModeFileLoaded = false;
-
-        std::string path = "save:/" + std::to_string(MostRecentNormalModeFile) + "/game_data.sav";
-        bool success = ParseFile(path.c_str());
-        if (!success) 
-        {
-            Log("Normal mode savefile failed to parse");
-
+            Log(loadMasterMode ? "No Master Mode savefile exists" : "No Normal Mode savefile exists");
             Map::m_NoSavefileDialog->SetOpen(true);
             return false;
         }
 
-        // Backups are created only while this call owns the mounted save.
+        ParsedSaveState parsedState;
+        const std::string path = "save:/" + std::to_string(saveSlot) + "/game_data.sav";
+        if (!ParseFileIntoState(path.c_str(), parsedState))
+        {
+            Log(loadMasterMode ? "Master Mode savefile failed to parse" : "Normal Mode savefile failed to parse");
+            Map::m_NoSavefileDialog->SetOpen(true);
+            return false;
+        }
+
+        ApplyParsedState(candidate, parsedState);
+        candidate.loadedSavefile = true;
+        candidate.gameIsRunning = false;
+        candidate.noSavefileForUser = false;
+        candidate.masterModeFileLoaded = loadMasterMode;
+        CommitState(candidate);
+        Map::m_GameRunningDialog->SetOpen(false);
+        Map::m_MasterModeDialog->SetOpen(false);
+        Map::m_NoSavefileDialog->SetOpen(false);
+
         if (!chooseProfile)
             CopySavefiles();
-        const SaveLoadDecision::Outcome outcome = SaveLoadDecision::Resolve(mountStatus, false, true);
-        LoadedSavefile = outcome.loadedSavefile;
-        return outcome.success;
+        return true;
     }
     // Failed to mount it. Can happen if no profile was choosen, or some other account thing went wrong 
     if (mountStatus == SaveLoadDecision::MountStatus::NotSelected) {
@@ -95,25 +100,26 @@ bool SavefileIO::LoadGamesave(bool loadMasterMode, bool chooseProfile)
     if (mountStatus == SaveLoadDecision::MountStatus::SaveInaccessible) {
         Log("Game is running. Loading backup...");
 
-        const bool loadedBackupSuccess = LoadBackup(loadMasterMode);
+        const bool loadedBackupSuccess = LoadBackup(loadMasterMode, candidate);
 
         if (!loadedBackupSuccess) 
         {
-            LoadedSavefile = false;
-            MasterModeFileLoaded = false;
             Map::m_GameRunningDialog->SetOpen(true);
-
             return false;
         }
-        const SaveLoadDecision::Outcome outcome = SaveLoadDecision::Resolve(mountStatus, loadMasterMode, true);
-        LoadedSavefile = outcome.loadedSavefile;
-        MasterModeFileLoaded = outcome.masterModeLoaded;
-        return outcome.success;
+        candidate.loadedSavefile = true;
+        candidate.gameIsRunning = true;
+        candidate.noSavefileForUser = false;
+        candidate.masterModeFileLoaded = loadMasterMode;
+        CommitState(candidate);
+        Map::m_GameRunningDialog->SetOpen(false);
+        Map::m_MasterModeDialog->SetOpen(false);
+        Map::m_NoSavefileDialog->SetOpen(false);
+        return true;
     }
     if (mountStatus == SaveLoadDecision::MountStatus::NoSave) {
         Log("The selected user has no save data");
 
-        MasterModeFileLoaded = false;
         Map::m_NoSavefileDialog->SetOpen(true);
         
         return false;
@@ -131,7 +137,7 @@ uint32_t SavefileIO::ReadU32(const uint8_t* buffer, size_t offset)
            (static_cast<uint32_t>(buffer[offset + 3]) << 24);
 }
 
-SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker)
+SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker, SaveState& candidate)
 {
     if (saveMounted)
     {
@@ -141,47 +147,28 @@ SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker)
 
     Result rc = 0;
     u64 botwId = 0x01007ef00011e000;
-    AccountUid uid = {0};
-
-    const bool previousMasterModeFileExists = MasterModeFileExists;
-    const bool previousGameIsRunning = GameIsRunning;
-    const bool previousLoadedSavefile = LoadedSavefile;
-    const auto restoreMapLoadState = [&]()
-    {
-        MasterModeFileExists = previousMasterModeFileExists;
-        GameIsRunning = previousGameIsRunning;
-        LoadedSavefile = previousLoadedSavefile;
-    };
-
-    MasterModeFileExists = false;
-    GameIsRunning = false;
-    LoadedSavefile = false;
+    AccountUid uid = {candidate.accountUid1, candidate.accountUid2};
 
     if (!openProfilePicker)
     {
-        // Use cached values
-        uid.uid[0] = AccountUid1;
-        uid.uid[1] = AccountUid2;
-
         if (accountUidIsValid(&uid))
         {
             Result rc = fsdevMountSaveDataReadOnly("save", botwId, uid);
             if (R_FAILED(rc))
             {
                 Log("Failed to mount save (cached user)");
-                GameIsRunning = true;
-
+                candidate.gameIsRunning = true;
                 return SaveLoadDecision::MountStatus::SaveInaccessible;
             }
             saveMounted = true;
 
             Log("Using cached account");
 
-            // Figure out which save file is the most recent one
-            MostRecentNormalModeFile = GetMostRecentSavefile("save:/", false);
-            MostRecentMasterModeFile = GetMostRecentSavefile("save:/", true);
+            candidate.mostRecentNormalModeFile = GetMostRecentSavefile("save:/", false);
+            candidate.mostRecentMasterModeFile = GetMostRecentSavefile("save:/", true);
+            candidate.masterModeFileExists = candidate.mostRecentMasterModeFile != -1;
 
-            if (MostRecentNormalModeFile == -1) 
+            if (candidate.mostRecentNormalModeFile == -1)
             {
                 Log("No normal mode file exists (cached user)");
                 UnmountSavefile();
@@ -207,13 +194,11 @@ SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker)
         if (selection.status == Accounts::ProfileSelectionStatus::NotSelected)
         {
             accountExit();
-            restoreMapLoadState();
             return SaveLoadDecision::MountStatus::NotSelected;
         }
         if (selection.status != Accounts::ProfileSelectionStatus::Selected)
         {
             accountExit();
-            restoreMapLoadState();
             return SaveLoadDecision::MountStatus::AccountError;
         }
         uid = selection.uid;
@@ -253,13 +238,11 @@ SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker)
             if (selection.status == Accounts::ProfileSelectionStatus::NotSelected)
             {
                 accountExit();
-                restoreMapLoadState();
                 return SaveLoadDecision::MountStatus::NotSelected;
             }
             if (selection.status != Accounts::ProfileSelectionStatus::Selected)
             {
                 accountExit();
-                restoreMapLoadState();
                 return SaveLoadDecision::MountStatus::AccountError;
             }
             uid = selection.uid;
@@ -268,9 +251,6 @@ SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker)
 
     accountExit();
 
-    AccountUid1 = uid.uid[0];
-    AccountUid2 = uid.uid[1];
-
     if (!accountUidIsValid(&uid))
     {
         Log("No valid account uid was selected");
@@ -278,6 +258,9 @@ SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker)
     } else {
         Log("Valid account uid from whatever profile selection method");
     }
+
+    candidate.accountUid1 = uid.uid[0];
+    candidate.accountUid2 = uid.uid[1];
 
     FsSaveDataInfoReader reader;
     FsSaveDataInfo info;
@@ -324,7 +307,6 @@ SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker)
     if (!hasBotwSavedata)
     {
         Log("User has no botw save data");
-        NoSavefileForUser = true;
         return SaveLoadDecision::MountStatus::NoSave;
     }
 
@@ -332,17 +314,16 @@ SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker)
     if (R_FAILED(rc))
     {
         Log("Botw is running. Failed to mount save (or fsdevMountSaveDataReadOnly() failed, who knows)");
-        GameIsRunning = true;
-
+        candidate.gameIsRunning = true;
         return SaveLoadDecision::MountStatus::SaveInaccessible;
     }
     saveMounted = true;
 
-    // Figure out which save file is the most recent one
-    MostRecentNormalModeFile = GetMostRecentSavefile("save:/", false);
-    MostRecentMasterModeFile = GetMostRecentSavefile("save:/", true);
+    candidate.mostRecentNormalModeFile = GetMostRecentSavefile("save:/", false);
+    candidate.mostRecentMasterModeFile = GetMostRecentSavefile("save:/", true);
+    candidate.masterModeFileExists = candidate.mostRecentMasterModeFile != -1;
 
-    if (MostRecentNormalModeFile == -1)
+    if (candidate.mostRecentNormalModeFile == -1)
     {
         Log("No savefile exists, even though savedata exists");
         UnmountSavefile();
@@ -367,9 +348,9 @@ bool SavefileIO::UnmountSavefile()
     return true;
 }
 
-bool SavefileIO::LoadBackup(bool masterMode)
+bool SavefileIO::LoadBackup(bool masterMode, SaveState& candidate)
 {
-    std::string profileIdStr = std::to_string(AccountUid1) + " - " + std::to_string(AccountUid2);
+    std::string profileIdStr = std::to_string(candidate.accountUid1) + " - " + std::to_string(candidate.accountUid2);
     std::string savesFolder = "sdmc:/switch/botw-unexplored/saves/" + profileIdStr + "/";
 
     if (!DirectoryExists("sdmc:/switch/botw-unexplored"))
@@ -383,24 +364,32 @@ bool SavefileIO::LoadBackup(bool masterMode)
     }
 
     // Get most recent savefile
-    MostRecentNormalModeFile = GetMostRecentSavefile(savesFolder, false);
-    MostRecentMasterModeFile = GetMostRecentSavefile(savesFolder, true);
+    const int mostRecentNormalModeFile = GetMostRecentSavefile(savesFolder, false);
+    const int mostRecentMasterModeFile = GetMostRecentSavefile(savesFolder, true);
 
     // So savefile exists
-    if (MostRecentNormalModeFile == -1)
+    if (mostRecentNormalModeFile == -1)
         return false;
-    if (MostRecentMasterModeFile == -1 && masterMode)
+    if (mostRecentMasterModeFile == -1 && masterMode)
         return false;
 
-    std::string savefilePath = savesFolder + std::to_string(!masterMode ? MostRecentNormalModeFile : MostRecentMasterModeFile) + "/game_data.sav";
+    const int saveSlot = masterMode ? mostRecentMasterModeFile : mostRecentNormalModeFile;
+    std::string savefilePath = savesFolder + std::to_string(saveSlot) + "/game_data.sav";
 
-    // Parse it
-    return ParseFile(savefilePath.c_str());
+    ParsedSaveState parsedState;
+    if (!ParseFileIntoState(savefilePath.c_str(), parsedState))
+        return false;
+
+    ApplyParsedState(candidate, parsedState);
+    candidate.mostRecentNormalModeFile = mostRecentNormalModeFile;
+    candidate.mostRecentMasterModeFile = mostRecentMasterModeFile;
+    candidate.masterModeFileExists = mostRecentMasterModeFile != -1;
+    return true;
 }
 
 uint32_t SavefileIO::GetSavefilePlaytime(const std::string& filepath)
 {
-    if (!FileExists(filepath))
+    if (!SavefileIO::FileExists(filepath))
         return 0;
 
     std::ifstream file;
@@ -425,7 +414,7 @@ uint32_t SavefileIO::GetSavefilePlaytime(const std::string& filepath)
     for (size_t offset = 0x0c; offset + 8 <= fileSize; offset += 8)
     {
         // Read the hash
-        uint32_t hashValue = ReadU32(buffer.data(), offset);
+        uint32_t hashValue = SavefileIO::ReadU32(buffer.data(), offset);
         if (hashValue == playtimeHash)
         {
             playtime = ReadU32(buffer.data(), offset + 4);
@@ -475,9 +464,6 @@ int SavefileIO::GetMostRecentSavefile(const std::string& dir, bool masterMode)
             mostRecentFile = i;
         }
     }
-
-    if (mostRecentFile != -1)
-        MasterModeFileExists = true;
 
     return mostRecentFile;
 }
@@ -589,27 +575,13 @@ bool SavefileIO::FileExists(const std::string& filepath)
     return true;
 }
 
-bool SavefileIO::ParseFile(const char *filepath)
+namespace
+{
+bool ParseFileIntoState(const char *filepath, SavefileIO::ParsedSaveState& parsedState)
 {
     Log("Opening savefile", filepath);
 
-    // Clear the current file data
-    foundKoroks.clear();
-    missingKoroks.clear();
-    foundShrines.clear();
-    missingShrines.clear();
-    foundDLCShrines.clear();
-    missingDLCShrines.clear();
-    visitedLocations.clear();
-    unexploredLocations.clear();
-    defeatedHinoxes.clear();
-    undefeatedHinoxes.clear();
-    defeatedTaluses.clear();
-    undefeatedTaluses.clear();
-    defeatedMoldugas.clear();
-    undefeatedMoldugas.clear();
-
-    if (!FileExists(filepath))
+    if (!SavefileIO::FileExists(filepath))
         return false;
 
     std::ifstream file;
@@ -635,16 +607,16 @@ bool SavefileIO::ParseFile(const char *filepath)
     for (size_t offset = 0x0c; offset + 8 <= fileSize; offset += 8)
     {
         // Read the korok or location hash ('id')
-        uint32_t hashValue = ReadU32(buffer.data(), offset);
+        uint32_t hashValue = SavefileIO::ReadU32(buffer.data(), offset);
 
         // Check if a korok with the hash exists
         Data::Korok *korok = Data::KorokExists(hashValue);
         if (korok)
         {
             // Read the 4 bytes after the hash. If it's not 0, then the seed has been found.
-            bool found = ReadU32(buffer.data(), offset + 4) != 0;
+            bool found = SavefileIO::ReadU32(buffer.data(), offset + 4) != 0;
 
-            found ? foundKoroks.push_back(korok) : missingKoroks.push_back(korok);
+            found ? parsedState.foundKoroks.push_back(korok) : parsedState.missingKoroks.push_back(korok);
         }
         
 
@@ -653,9 +625,9 @@ bool SavefileIO::ParseFile(const char *filepath)
         if (shrine)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the shrine has been found.
-            bool defeated = ReadU32(buffer.data(), offset + 4) != 0;
+            bool defeated = SavefileIO::ReadU32(buffer.data(), offset + 4) != 0;
 
-            defeated ? foundShrines.push_back(shrine) : missingShrines.push_back(shrine);
+            defeated ? parsedState.foundShrines.push_back(shrine) : parsedState.missingShrines.push_back(shrine);
         }
 
         // Check for dlc shrines
@@ -663,9 +635,9 @@ bool SavefileIO::ParseFile(const char *filepath)
         if (dlcShrine)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the shrine has been found.
-            bool defeated = ReadU32(buffer.data(), offset + 4) != 0;
+            bool defeated = SavefileIO::ReadU32(buffer.data(), offset + 4) != 0;
 
-            defeated ? foundDLCShrines.push_back(dlcShrine) : missingDLCShrines.push_back(dlcShrine);
+            defeated ? parsedState.foundDLCShrines.push_back(dlcShrine) : parsedState.missingDLCShrines.push_back(dlcShrine);
         }
 
         // Check if a location with the hash exists
@@ -673,9 +645,9 @@ bool SavefileIO::ParseFile(const char *filepath)
         if (location)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the location has been visited.
-            bool visited = ReadU32(buffer.data(), offset + 4) != 0;
+            bool visited = SavefileIO::ReadU32(buffer.data(), offset + 4) != 0;
 
-            visited ? visitedLocations.push_back(location) : unexploredLocations.push_back(location);
+            visited ? parsedState.visitedLocations.push_back(location) : parsedState.unexploredLocations.push_back(location);
         }
 
         // Check if a hinox with the hash exists
@@ -683,9 +655,9 @@ bool SavefileIO::ParseFile(const char *filepath)
         if (hinox)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the hinox has been defeated.
-            bool defeated = ReadU32(buffer.data(), offset + 4) != 0;
+            bool defeated = SavefileIO::ReadU32(buffer.data(), offset + 4) != 0;
 
-            defeated ? defeatedHinoxes.push_back(hinox) : undefeatedHinoxes.push_back(hinox);
+            defeated ? parsedState.defeatedHinoxes.push_back(hinox) : parsedState.undefeatedHinoxes.push_back(hinox);
         }
 
         // Check if a talus with the hash exists
@@ -693,9 +665,9 @@ bool SavefileIO::ParseFile(const char *filepath)
         if (talus)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the talus has been defeated.
-            bool defeated = ReadU32(buffer.data(), offset + 4) != 0;
+            bool defeated = SavefileIO::ReadU32(buffer.data(), offset + 4) != 0;
 
-            defeated ? defeatedTaluses.push_back(talus) : undefeatedTaluses.push_back(talus);
+            defeated ? parsedState.defeatedTaluses.push_back(talus) : parsedState.undefeatedTaluses.push_back(talus);
         }
 
         // Check if a molduga with the hash exists
@@ -703,50 +675,61 @@ bool SavefileIO::ParseFile(const char *filepath)
         if (molduga)
         {
             // Read the 4 bytes after the hash. If it is not 0, then the molduga has been defeated.
-            bool defeated = ReadU32(buffer.data(), offset + 4) != 0;
+            bool defeated = SavefileIO::ReadU32(buffer.data(), offset + 4) != 0;
 
-            defeated ? defeatedMoldugas.push_back(molduga) : undefeatedMoldugas.push_back(molduga);
+            defeated ? parsedState.defeatedMoldugas.push_back(molduga) : parsedState.undefeatedMoldugas.push_back(molduga);
         }
 
         // Check if has the dlc
         uint32_t BalladOfHeroes_Ready = 1186840637; // Set to true if the DLC is owned
         if (hashValue == BalladOfHeroes_Ready) {
-            HasDLC = ReadU32(buffer.data(), offset + 4) == 1;
-            Log("User has DLC:", HasDLC ? "true" : "false");
+            parsedState.hasDLC = SavefileIO::ReadU32(buffer.data(), offset + 4) == 1;
+            Log("User has DLC:", parsedState.hasDLC ? "true" : "false");
         }
     }
 
     Log("Successfully parsed file", filepath);
 
-    LoadedSavefile = true;
+    return true;
+}
+}
 
+bool SavefileIO::ParseFile(const char *filepath)
+{
+    ParsedSaveState parsedState;
+    if (!ParseFileIntoState(filepath, parsedState))
+        return false;
+
+    SaveState candidate = CurrentState;
+    ApplyParsedState(candidate, parsedState);
+    candidate.loadedSavefile = true;
+    CommitState(candidate);
     return true;
 }
 
-std::vector<Data::Korok *> SavefileIO::foundKoroks;
-std::vector<Data::Korok *> SavefileIO::missingKoroks;
-std::vector<Data::Shrine*> SavefileIO::foundShrines;
-std::vector<Data::Shrine*> SavefileIO::missingShrines;
-std::vector<Data::DLCShrine*> SavefileIO::foundDLCShrines;
-std::vector<Data::DLCShrine*> SavefileIO::missingDLCShrines;
-std::vector<Data::Location *> SavefileIO::visitedLocations;
-std::vector<Data::Location *> SavefileIO::unexploredLocations;
-std::vector<Data::Hinox *> SavefileIO::defeatedHinoxes;
-std::vector<Data::Hinox *> SavefileIO::undefeatedHinoxes;
-std::vector<Data::Talus *> SavefileIO::defeatedTaluses;
-std::vector<Data::Talus *> SavefileIO::undefeatedTaluses;
-std::vector<Data::Molduga *> SavefileIO::defeatedMoldugas;
-std::vector<Data::Molduga *> SavefileIO::undefeatedMoldugas;
-
-u64 SavefileIO::AccountUid1;
-u64 SavefileIO::AccountUid2;
-int SavefileIO::MostRecentNormalModeFile = -1;
-int SavefileIO::MostRecentMasterModeFile = -1;
-bool SavefileIO::LoadedSavefile = false;
-bool SavefileIO::GameIsRunning = false;
-bool SavefileIO::NoSavefileForUser = false;
-bool SavefileIO::MasterModeFileExists = false;
-bool SavefileIO::MasterModeFileLoaded = false;
-bool SavefileIO::HasDLC = false;
-
-int SavefileIO::MasterModeSlot;
+SavefileIO::SaveState SavefileIO::CurrentState;
+std::vector<Data::Korok *>& SavefileIO::foundKoroks = CurrentState.foundKoroks;
+std::vector<Data::Korok *>& SavefileIO::missingKoroks = CurrentState.missingKoroks;
+std::vector<Data::Shrine*>& SavefileIO::foundShrines = CurrentState.foundShrines;
+std::vector<Data::Shrine*>& SavefileIO::missingShrines = CurrentState.missingShrines;
+std::vector<Data::DLCShrine*>& SavefileIO::foundDLCShrines = CurrentState.foundDLCShrines;
+std::vector<Data::DLCShrine*>& SavefileIO::missingDLCShrines = CurrentState.missingDLCShrines;
+std::vector<Data::Location *>& SavefileIO::visitedLocations = CurrentState.visitedLocations;
+std::vector<Data::Location *>& SavefileIO::unexploredLocations = CurrentState.unexploredLocations;
+std::vector<Data::Hinox *>& SavefileIO::defeatedHinoxes = CurrentState.defeatedHinoxes;
+std::vector<Data::Hinox *>& SavefileIO::undefeatedHinoxes = CurrentState.undefeatedHinoxes;
+std::vector<Data::Talus *>& SavefileIO::defeatedTaluses = CurrentState.defeatedTaluses;
+std::vector<Data::Talus *>& SavefileIO::undefeatedTaluses = CurrentState.undefeatedTaluses;
+std::vector<Data::Molduga *>& SavefileIO::defeatedMoldugas = CurrentState.defeatedMoldugas;
+std::vector<Data::Molduga *>& SavefileIO::undefeatedMoldugas = CurrentState.undefeatedMoldugas;
+u64& SavefileIO::AccountUid1 = CurrentState.accountUid1;
+u64& SavefileIO::AccountUid2 = CurrentState.accountUid2;
+int& SavefileIO::MostRecentNormalModeFile = CurrentState.mostRecentNormalModeFile;
+int& SavefileIO::MostRecentMasterModeFile = CurrentState.mostRecentMasterModeFile;
+bool& SavefileIO::LoadedSavefile = CurrentState.loadedSavefile;
+bool& SavefileIO::GameIsRunning = CurrentState.gameIsRunning;
+bool& SavefileIO::NoSavefileForUser = CurrentState.noSavefileForUser;
+bool& SavefileIO::MasterModeFileExists = CurrentState.masterModeFileExists;
+bool& SavefileIO::MasterModeFileLoaded = CurrentState.masterModeFileLoaded;
+bool& SavefileIO::HasDLC = CurrentState.hasDLC;
+int& SavefileIO::MasterModeSlot = CurrentState.masterModeSlot;
