@@ -8,7 +8,7 @@ jobs:
   host-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y g++ libglm-dev
       - run: bash tests/run_host_tests.sh
       - run: SANITIZE=1 bash tests/run_host_tests.sh
@@ -19,9 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     container: devkitpro/devkita64@sha256:1fc388c3a0d34bd2045a6dadcb1020e069d5f876a187fd705de14b4440c00282
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: make
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: botw-unexplored-nro
           path: botw-unexplored.nro
