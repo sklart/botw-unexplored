@@ -2,6 +2,7 @@
 
 #include "Graphics/Texture2D.h"
 #include "ImageViewerLayout.h"
+#include "Localization.h"
 #include "Map.h"
 
 ImageViewer::ImageViewer()
@@ -65,4 +66,8 @@ void ImageViewer::Render(glm::mat4& projection)
     m_Image->m_ViewMatrix = previousView;
     m_Image->m_Position = previousPosition;
     m_Image->m_Scale = previousScale;
+
+    Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::ImageViewerBack),
+                               glm::vec2(Map::m_ScreenRight - 24.0f, Map::m_ScreenTop - 26.0f),
+                               0.32f, glm::vec3(1.0f), ALIGN_RIGHT);
 }

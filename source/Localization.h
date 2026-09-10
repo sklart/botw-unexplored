@@ -29,6 +29,7 @@ namespace Localization
         MasterModeDescription,
         Legend,
         Close,
+        ImageViewerBack,
         Koroks,
         Shrines,
         Hinoxes,

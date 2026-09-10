@@ -25,7 +25,7 @@ Legend::Legend()
 
     m_Background.m_ProjectionMatrix = &Map::m_ProjectionMatrix;
 
-    m_Background.m_Color = glm::vec4(0.0f, 0.0f, 0.0f, 0.5f);
+    m_Background.m_Color = glm::vec4(0.0f, 0.0f, 0.0f, 0.68f);
 
     float buttonPadding = 25.0f;
     float buttonVerticalPadding = 25.0f;

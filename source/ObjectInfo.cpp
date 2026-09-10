@@ -13,7 +13,7 @@ ObjectInfo::ObjectInfo()
                         glm::vec2(Map::m_ScreenLeft + 390.0f, Map::m_ScreenBottom),
                         glm::vec2(Map::m_ScreenLeft + 390.0f, Map::m_ScreenTop),
                         glm::vec2(Map::m_ScreenLeft, Map::m_ScreenTop));
-    m_Background.m_Color = glm::vec4(0.0f, 0.0f, 0.0f, 0.68f);
+    m_Background.m_Color = glm::vec4(0.0f, 0.0f, 0.0f, 0.75f);
 }
 
 void ObjectInfo::SetObject(Data::ObjectType type, uint32_t completionHash, const glm::vec2& mapPosition,

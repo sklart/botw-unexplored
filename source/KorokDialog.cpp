@@ -16,7 +16,7 @@ KorokDialog::KorokDialog()
         glm::vec2(Map::m_ScreenLeft + Width, Map::m_ScreenTop),
         glm::vec2(Map::m_ScreenLeft, Map::m_ScreenTop)
     );
-    m_Background.m_Color = glm::vec4(0.0f, 0.0f, 0.0f, 0.6f);
+    m_Background.m_Color = glm::vec4(0.0f, 0.0f, 0.0f, 0.75f);
 }
 
 void KorokDialog::Render(glm::mat4 projMat, glm::mat4 viewMat)

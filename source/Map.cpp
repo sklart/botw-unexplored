@@ -630,7 +630,11 @@ void Map::Render()
     m_Font.RenderBatch();
 
     if (m_ImageViewer->IsOpen())
+    {
+        m_Font.BeginBatch();
         m_ImageViewer->Render(m_ProjectionMatrix);
+        m_Font.RenderBatch();
+    }
 
     m_Font.m_ViewMatrix = &m_ViewMatrix;
 }

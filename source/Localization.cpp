@@ -27,7 +27,7 @@ namespace
     const std::string english[] = {
         "Exit", "Choose another profile", "No save data found for that user", "Make sure you chose the correct profile.",
         "BotW is running - can't load save", "Please run this app at least once without BotW running", "After that you can use it while playing.",
-        "No", "Yes", "Master mode save file detected", "Would you like to load it?", "Legend", "X - close", "Koroks",
+        "No", "Yes", "Master mode save file detected", "Would you like to load it?", "Legend", "X - close", "B/X - back", "Koroks",
         "Shrines", "Hinoxes", "Taluses", "Moldugas", "Locations", "Show Completed", "B - mark as found",
         "Press X: legend", "BotW is running.", "Loaded older save", "Press Y: master mode",
         "Press Y: normal mode", "L/R: zoom  (-): user  (+): exit", "EN", "Missing", "Completed", "All",
@@ -37,7 +37,7 @@ namespace
     const std::string spanish[] = {
         "Salir", "Elegir otro perfil", "No se encontraron datos guardados para este usuario", "Asegúrate de haber elegido el perfil correcto.",
         "BotW está en ejecución - no se puede cargar la partida", "Ejecuta esta aplicación al menos una vez sin BotW en ejecución.", "Después podrás usarla mientras juegas.",
-        "No", "Sí", "Se detectó una partida en modo maestro", "¿Quieres cargarla?", "Leyenda", "X - cerrar", "Kologs",
+        "No", "Sí", "Se detectó una partida en modo maestro", "¿Quieres cargarla?", "Leyenda", "X - cerrar", "B/X - volver", "Kologs",
         "Santuarios", "Hinóx", "Taludes", "Moldugas", "Ubicaciones", "Mostrar completados", "B - marcar como encontrado",
         "X: leyenda", "BotW está en ejecución.", "Se cargó una partida anterior", "Y: modo maestro",
         "Y: modo normal", "L/R: zoom  (-): usuario  (+): salir", "ES", "Pendientes", "Completados", "Todos",
@@ -46,7 +46,7 @@ namespace
     const std::string russian[] = {
         "Выход", "Выбрать другой профиль", "Для этого пользователя не найдены сохранения", "Убедитесь, что выбран правильный профиль.",
         "BotW запущена - сохранение недоступно", "Запустите приложение хотя бы раз, когда BotW не запущена.", "После этого им можно будет пользоваться во время игры.",
-        "Нет", "Да", "Найдено сохранение режима мастера", "Загрузить его?", "Легенда", "X - закрыть", "Короки",
+        "Нет", "Да", "Найдено сохранение режима мастера", "Загрузить его?", "Легенда", "X - закрыть", "B/X - назад", "Короки",
         "Святилища", "Хиноксы", "Глыбники", "Молдоры", "Локации", "Показывать найденное", "B - отметить найденным",
         "X: открыть легенду", "BotW запущена.", "Загружено старое сохранение", "Y: режим мастера",
         "Y: обычный режим", "L/R: масштаб  (-): профиль  (+): выход", "RU", "Не найдено", "Найдено", "Все",
