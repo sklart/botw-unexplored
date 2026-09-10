@@ -285,18 +285,18 @@ void Map::Update()
     glm::vec2 stickRPosition = glm::vec2((float)analog_stick_r.x / (float)JOYSTICK_MAX, (float)analog_stick_r.y / (float)JOYSTICK_MAX);
 
     float deadzone = 0.1f;
-    if (fabs(stickRPosition.y) >= deadzone)
+    if (!imageViewerWasOpen && fabs(stickRPosition.y) >= deadzone)
         m_Zoom *= 1.0f + zoomAmount * stickRPosition.y;
 
     // Zoom with L and R
-    if (buttonsDown & HidNpadButton_R) // Zoom in
+    if (!imageViewerWasOpen && (buttonsDown & HidNpadButton_R)) // Zoom in
         m_Zoom *= 1.0f + zoomAmount;
 
-    if (buttonsDown & HidNpadButton_L) // Zoom out
+    if (!imageViewerWasOpen && (buttonsDown & HidNpadButton_L)) // Zoom out
         m_Zoom *= 1.0f - zoomAmount;
 
     // Reset zoom if pressing L or R stick
-    if (buttonsPressed & HidNpadButton_StickL)
+    if (!imageViewerWasOpen && (buttonsPressed & HidNpadButton_StickL))
     {
         m_Zoom = m_DefaultZoom;
         m_CameraPosition = glm::vec2(0.0f, 0.0f);
@@ -305,7 +305,7 @@ void Map::Update()
     if (m_Zoom < minZoom) m_Zoom = minZoom;
 
     // Open profile picker
-    if (buttonsPressed & HidNpadButton_Minus)
+    if (!imageViewerWasOpen && (buttonsPressed & HidNpadButton_Minus))
     {
         if (SavefileIO::LoadedSavefile)
         {
@@ -318,7 +318,7 @@ void Map::Update()
     }
 
     // Toggle legend
-    if (buttonsPressed & HidNpadButton_X)
+    if (!imageViewerWasOpen && (buttonsPressed & HidNpadButton_X))
     {
         // Close the korok dialog first, then if it's not open close the legend
         if (m_KorokDialog->m_IsOpen)
@@ -336,7 +336,7 @@ void Map::Update()
     //     m_ShowAllObjects = false;
 
     // Toggle master mode
-    if ((buttonsPressed & HidNpadButton_Y) && !m_ObjectInfo->m_IsOpen)
+    if (!imageViewerWasOpen && (buttonsPressed & HidNpadButton_Y) && !m_ObjectInfo->m_IsOpen)
     {
         if (SavefileIO::MostRecentMasterModeFile != -1)
         {
@@ -349,7 +349,7 @@ void Map::Update()
         }
     }
 
-    if (buttonsPressed & HidNpadButton_B)
+    if (!imageViewerWasOpen && (buttonsPressed & HidNpadButton_B))
     {
         if (m_KorokDialog->m_IsOpen)
         {
@@ -375,14 +375,14 @@ void Map::Update()
     glm::vec2 stickLPosition = glm::vec2((float)analog_stick_l.x / (float)JOYSTICK_MAX, (float)analog_stick_l.y / (float)JOYSTICK_MAX);
 
     float distanceToCenter = glm::distance(stickLPosition, glm::vec2(0.0f, 0.0f));
-    if (distanceToCenter >= deadzone)
+    if (!imageViewerWasOpen && distanceToCenter >= deadzone)
     {
         m_CameraPosition += stickLPosition * (analogStickMovementSpeed / m_Zoom);
         m_HasTargetCameraPosition = false;
         m_CursorFollowsTarget = false;
     }
 
-    if (!m_Legend->m_IsOpen && !m_KorokDialog->m_IsOpen && !m_ObjectInfo->m_IsOpen &&
+    if (!imageViewerWasOpen && !m_Legend->m_IsOpen && !m_KorokDialog->m_IsOpen && !m_ObjectInfo->m_IsOpen &&
         !m_NoSavefileDialog->m_IsOpen && !m_GameRunningDialog->m_IsOpen && !m_MasterModeDialog->m_IsOpen)
     {
         const float cursorStep = 12.0f / m_Zoom;
@@ -394,7 +394,7 @@ void Map::Update()
         if (buttonsPressed & HidNpadButton_ZR) FocusNextMissing();
     }
 
-    if (m_HasTargetCameraPosition)
+    if (!imageViewerWasOpen && m_HasTargetCameraPosition)
     {
         const glm::vec2 delta = m_TargetCameraPosition - m_CameraPosition;
         if (glm::dot(delta, delta) < 1.0f)
@@ -458,9 +458,8 @@ void Map::Update()
                     }
                     else
                     {
-                        OpenNearestObject(touchPosition / m_Zoom + m_CameraPosition);
-                        const bool clicked = m_ObjectInfo->m_IsOpen || m_KorokDialog->m_IsOpen;
-                        m_IsDragging = !clicked;
+                        const bool selected = OpenNearestObject(touchPosition / m_Zoom + m_CameraPosition);
+                        m_IsDragging = !selected;
                         m_PrevTouchPosition = touchPosition;
                     }
                 }
@@ -694,7 +693,7 @@ void Map::Destroy()
     m_MasterModeIcon.Destroy();
 }
 
-void Map::OpenNearestObject(const glm::vec2& mapPosition)
+bool Map::OpenNearestObject(const glm::vec2& mapPosition)
 {
     struct Candidate
     {
@@ -743,12 +742,14 @@ void Map::OpenNearestObject(const glm::vec2& mapPosition)
             CloseInfoPanels();
             m_KorokDialog->SetSeed(m_Koroks[best.korokIndex].m_ObjectData->zeldaDungeonId, best.korokIndex);
             m_KorokDialog->SetOpen(true);
-            return;
+            return true;
         }
         CloseInfoPanels();
         m_ObjectInfo->SetObject(best.type, best.hash, best.position, best.name, best.found);
         m_ObjectInfo->SetOpen(true);
+        return true;
     }
+    return false;
 }
 
 void Map::MarkSelectedObjectFound()

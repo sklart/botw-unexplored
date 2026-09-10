@@ -28,7 +28,7 @@ namespace Map
     bool Init();
 
     void UpdateMapObjects();
-    void OpenNearestObject(const glm::vec2& mapPosition);
+    bool OpenNearestObject(const glm::vec2& mapPosition);
     void CloseInfoPanels();
     void MarkSelectedObjectFound();
     void FocusNextMissing();
