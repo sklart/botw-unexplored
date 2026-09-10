@@ -21,6 +21,7 @@ class Dialog;
 class LineRenderer;
 class KorokDialog;
 class ObjectInfo;
+class ImageViewer;
 
 namespace Map
 {
@@ -91,6 +92,7 @@ namespace Map
     extern Legend* m_Legend;
     extern KorokDialog* m_KorokDialog;
     extern ObjectInfo* m_ObjectInfo;
+    extern ImageViewer* m_ImageViewer;
     extern Dialog* m_NoSavefileDialog;
     extern Dialog* m_GameRunningDialog;
     extern Dialog* m_MasterModeDialog;

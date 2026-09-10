@@ -13,6 +13,7 @@
 #include "MapObject.hpp"
 #include "KorokDialog.h"
 #include "ObjectInfo.h"
+#include "ImageViewer.h"
 #include "ObjectModel.h"
 #include "Log.h"
 #include "Localization.h"
@@ -48,6 +49,42 @@ namespace
         }
         return SavefileIO::GameIsRunning && ManualProgress::IsMarkedFound(context, type, hash);
     }
+
+    void RenderSelectedObjectHighlight()
+    {
+        if (Map::m_LineRenderer == nullptr)
+            return;
+
+        glm::vec2 position;
+        bool hasSelection = false;
+        if (Map::m_KorokDialog != nullptr && Map::m_KorokDialog->m_IsOpen &&
+            Map::m_KorokDialog->m_KorokIndex >= 0 && Map::m_KorokDialog->m_KorokIndex < Data::KoroksCount)
+        {
+            position = Map::m_Koroks[Map::m_KorokDialog->m_KorokIndex].m_Position;
+            hasSelection = true;
+        }
+        else if (Map::m_ObjectInfo != nullptr && Map::m_ObjectInfo->m_IsOpen)
+        {
+            position = Map::m_ObjectInfo->GetMapPosition();
+            hasSelection = true;
+        }
+
+        if (!hasSelection || !Map::IsInView(position, 30.0f))
+            return;
+
+        const float halfSize = 18.0f / Map::m_Zoom;
+        const float width = 2.0f / Map::m_Zoom;
+        const glm::vec4 color(0.0f, 0.82f, 1.0f, 1.0f);
+        const glm::vec2 left = position + glm::vec2(-halfSize, 0.0f);
+        const glm::vec2 bottom = position + glm::vec2(0.0f, -halfSize);
+        const glm::vec2 right = position + glm::vec2(halfSize, 0.0f);
+        const glm::vec2 top = position + glm::vec2(0.0f, halfSize);
+        Map::m_LineRenderer->AddLine(left, bottom, width, color);
+        Map::m_LineRenderer->AddLine(bottom, right, width, color);
+        Map::m_LineRenderer->AddLine(right, top, width, color);
+        Map::m_LineRenderer->AddLine(top, left, width, color);
+        Map::m_LineRenderer->RenderLines(Map::m_ProjectionMatrix, Map::m_ViewMatrix);
+    }
 }
 
 bool Map::Init()
@@ -76,6 +113,7 @@ bool Map::Init()
 
     m_KorokDialog = new KorokDialog();
     m_ObjectInfo = new ObjectInfo();
+    m_ImageViewer = new ImageViewer();
 
     // Create UI
     m_Legend = new Legend();
@@ -226,6 +264,15 @@ void Map::Update()
     u64 buttonsPressed = padGetButtonsDown(m_Pad);
     u64 buttonsDown = padGetButtons(m_Pad);
 
+    const bool imageViewerWasOpen = m_ImageViewer != nullptr && m_ImageViewer->IsOpen();
+    if (imageViewerWasOpen)
+    {
+        if (buttonsPressed & (HidNpadButton_B | HidNpadButton_X))
+            m_ImageViewer->Close();
+        buttonsPressed = 0;
+        buttonsDown = 0;
+    }
+
     float zoomAmount = 0.015f;
     float dragAmont = 0.85f;
     float analogStickMovementSpeed = 10.0f;
@@ -369,75 +416,64 @@ void Map::Update()
     m_ViewMatrix = glm::scale(m_ViewMatrix, glm::vec3(m_Zoom, m_Zoom, 0.0f));
     m_ViewMatrix = glm::translate(m_ViewMatrix, glm::vec3(-m_CameraPosition, 1.0));
 
-    // Dragging
+    // Touch routing keeps card controls local while allowing selection and dragging on the free map area.
     HidTouchScreenState state={0};
     if (hidGetTouchScreenStates(&state, 1)) {
-        // Convert to more suitable coords
-        glm::vec2 touchPosition = glm::vec2(state.touches[0].x - m_CameraWidth / 2, -(state.touches[0].y - m_CameraHeight / 2));
+        const bool hasTouch = state.count >= 1;
+        const glm::vec2 touchPosition = hasTouch
+            ? glm::vec2(state.touches[0].x - m_CameraWidth / 2, -(state.touches[0].y - m_CameraHeight / 2))
+            : glm::vec2(0.0f);
 
-        // A new touch
-        if (state.count != m_PrevTouchCount)
+        if (imageViewerWasOpen)
         {
-            m_PrevTouchCount = state.count;
-
-            // Dont drag if finger is on the legend
-            if (!(m_Legend->m_IsOpen && m_Legend->IsPositionOnLegend(touchPosition)) &&
-                !m_KorokDialog->m_IsOpen &&
-                !m_ObjectInfo->m_IsOpen &&
-                !(m_NoSavefileDialog->m_IsOpen && m_NoSavefileDialog->IsPositionOn(touchPosition)) &&
-                !(m_GameRunningDialog->m_IsOpen && m_GameRunningDialog->IsPositionOn(touchPosition)) &&
-                !(m_MasterModeDialog->m_IsOpen && m_MasterModeDialog->IsPositionOn(touchPosition)))
+            m_IsDragging = false;
+            if (state.count != m_PrevTouchCount)
             {
-                // Check if the finger was pressed
                 if (state.count == 1)
+                    m_ImageViewer->Close();
+                m_PrevTouchCount = state.count;
+            }
+        }
+        else
+        {
+            if (state.count != m_PrevTouchCount)
+            {
+                m_PrevTouchCount = state.count;
+                const bool onDialog = (m_Legend->m_IsOpen && m_Legend->IsPositionOnLegend(touchPosition)) ||
+                    (m_NoSavefileDialog->m_IsOpen && m_NoSavefileDialog->IsPositionOn(touchPosition)) ||
+                    (m_GameRunningDialog->m_IsOpen && m_GameRunningDialog->IsPositionOn(touchPosition)) ||
+                    (m_MasterModeDialog->m_IsOpen && m_MasterModeDialog->IsPositionOn(touchPosition));
+                const bool onKorokCard = m_KorokDialog->m_IsOpen && m_KorokDialog->IsPositionOn(touchPosition);
+                const bool onObjectCard = m_ObjectInfo->m_IsOpen && m_ObjectInfo->IsPositionOn(touchPosition);
+
+                if (state.count == 1 && !onDialog)
                 {
                     m_HasTargetCameraPosition = false;
                     m_CursorFollowsTarget = false;
-                    // Check if clicked korok
-                    bool clicked = false;
-                    for (int i = 0; i < Data::KoroksCount; i++)
+                    if (onKorokCard || onObjectCard)
                     {
-                        if (m_Legend->ShouldShow(m_Koroks[i].m_Found) && m_Koroks[i].IsClicked(touchPosition))
-                        {
-                            // Set the korok dialog
-                            CloseInfoPanels();
-                            m_KorokDialog->SetSeed(m_Koroks[i].m_ObjectData->zeldaDungeonId, i);
-                            m_KorokDialog->SetOpen(true);
-
-                            clicked = true;
-                        }
+                        m_IsDragging = false;
+                        if (onKorokCard && m_KorokDialog->IsImagePositionOn(touchPosition))
+                            m_ImageViewer->Open(m_KorokDialog->m_Image);
                     }
-
-                    // Hide the korok info if no korok was clicked on
-                    if (!clicked)
+                    else
                     {
                         OpenNearestObject(touchPosition / m_Zoom + m_CameraPosition);
-                        clicked = m_ObjectInfo->m_IsOpen || m_KorokDialog->m_IsOpen;
+                        const bool clicked = m_ObjectInfo->m_IsOpen || m_KorokDialog->m_IsOpen;
+                        m_IsDragging = !clicked;
+                        m_PrevTouchPosition = touchPosition;
                     }
-
-                    // Only drag if not clicking on korok
-                    m_IsDragging = !clicked;
-                    m_PrevTouchPosition = touchPosition; // The origin of the drag
                 }
+                else if (state.count == 0)
+                    m_IsDragging = false;
             }
 
-            // Check if the finger was released
-            if (state.count == 0)
-                m_IsDragging = false;
-        }
-
-        // Handle the camera dragging
-        if (state.count >= 1 && m_IsDragging)
-        {
-            // Calculate how much the finger has moved this frame
-            glm::vec2 delta = m_PrevTouchPosition - touchPosition;
-
-            // Move the camera by the delta. Flip the direction of the y-coordinate and
-            // divide by the zoom to move the same amount irregardless of the zoom
-            m_CameraPosition += (delta * dragAmont) / m_Zoom;
-
-            // Set the touch pos to the most recent one, so we only check for the delta between each frame and not from when the drag started
-            m_PrevTouchPosition = touchPosition;
+            if (hasTouch && m_IsDragging)
+            {
+                const glm::vec2 delta = m_PrevTouchPosition - touchPosition;
+                m_CameraPosition += (delta * dragAmont) / m_Zoom;
+                m_PrevTouchPosition = touchPosition;
+            }
         }
     }
 
@@ -541,6 +577,7 @@ void Map::Render()
             for (int i = 0; i < Data::LocationsCount; i++)
                 m_Locations[i].Render();
         }
+        RenderSelectedObjectHighlight();
     }
 
     if (SavefileIO::LoadedSavefile && !m_Legend->m_IsOpen && !m_KorokDialog->m_IsOpen && !m_ObjectInfo->m_IsOpen)
@@ -593,6 +630,9 @@ void Map::Render()
 
     m_Font.RenderBatch();
 
+    if (m_ImageViewer->IsOpen())
+        m_ImageViewer->Render(m_ProjectionMatrix);
+
     m_Font.m_ViewMatrix = &m_ViewMatrix;
 }
 
@@ -644,6 +684,8 @@ void Map::Destroy()
     m_KorokDialog = nullptr;
     delete m_ObjectInfo;
     m_ObjectInfo = nullptr;
+    delete m_ImageViewer;
+    m_ImageViewer = nullptr;
     delete m_LineRenderer;
     m_LineRenderer = nullptr;
 
@@ -752,6 +794,8 @@ void Map::FocusNextMissing()
 
 void Map::CloseInfoPanels()
 {
+    if (m_ImageViewer != nullptr)
+        m_ImageViewer->Close();
     if (m_KorokDialog != nullptr)
         m_KorokDialog->SetOpen(false);
     if (m_ObjectInfo != nullptr)
@@ -806,6 +850,7 @@ MapLocation* Map::m_Locations;
 Legend* Map::m_Legend;
 KorokDialog* Map::m_KorokDialog;
 ObjectInfo* Map::m_ObjectInfo;
+ImageViewer* Map::m_ImageViewer;
 Dialog* Map::m_NoSavefileDialog;
 Dialog* Map::m_GameRunningDialog;
 Dialog* Map::m_MasterModeDialog;

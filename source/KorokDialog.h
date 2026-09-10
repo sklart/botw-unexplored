@@ -14,6 +14,8 @@ public:
 
     void SetPosition(glm::vec2 position);
     glm::vec2 GetPosition();
+    bool IsPositionOn(const glm::vec2& position) const;
+    bool IsImagePositionOn(const glm::vec2& position) const;
 
     ~KorokDialog();
 

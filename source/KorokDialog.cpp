@@ -37,7 +37,10 @@ void KorokDialog::Render(glm::mat4 projMat, glm::mat4 viewMat)
         m_Image->Render();
     }
 
-    // Place the text just below the image
+    const std::string title = Localization::Get(Localization::Text::Korok) + " #" + std::to_string(m_Seed);
+    Map::m_Font.AddTextToBatch(title, glm::vec2(Map::m_ScreenLeft + m_Margin, Map::m_ScreenTop - 38.0f), 0.42f, glm::vec3(1.0f));
+
+    // Place the text just below the image.
     float textY = 0.0f;
     if (m_Image)
         textY = m_Image->m_Position.y - (m_Image->m_Texture->m_Height * m_Image->m_Scale / 2.0f) - 50.0f;
@@ -49,10 +52,9 @@ void KorokDialog::Render(glm::mat4 projMat, glm::mat4 viewMat)
 
     Map::m_Font.AddTextToBatch(m_Text, startPos, 0.46f, glm::vec3(1.0f), ALIGN_LEFT, Width - m_Margin * 2);
 
-    // Russian action labels are rendered on separate lines to prevent overlap.
     if (SavefileIO::GameIsRunning && m_KorokIndex >= 0 && !Map::m_Koroks[m_KorokIndex].m_Found && ManualProgress::CanPersist())
-        Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::MarkFound), glm::vec2(Map::m_ScreenLeft + 15, Map::m_ScreenTop - 32.0f), 0.34f, glm::vec3(1.0f), ALIGN_LEFT);
-    Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::Close), glm::vec2(Map::m_ScreenLeft + Width - 20.0f, Map::m_ScreenTop - 62.0f), 0.34f, glm::vec3(1.0f), ALIGN_RIGHT);
+        Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::MarkFound), glm::vec2(Map::m_ScreenLeft + 15, Map::m_ScreenBottom + 38.0f), 0.34f, glm::vec3(1.0f), ALIGN_LEFT);
+    Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::Close), glm::vec2(Map::m_ScreenLeft + Width - 20.0f, Map::m_ScreenBottom + 38.0f), 0.34f, glm::vec3(1.0f), ALIGN_RIGHT);
 }
 
 void KorokDialog::SetOpen(bool open)
@@ -99,7 +101,7 @@ void KorokDialog::SetSeed(int seed, int korokIndex)
     float w = m_Image->m_Texture->m_Width * m_Image->m_Scale;
     float h = m_Image->m_Texture->m_Height * m_Image->m_Scale;
 
-    m_Image->m_Position = glm::vec2(Map::m_ScreenLeft + m_Margin + w / 2.0f, Map::m_ScreenTop - 60.0f - h / 2.0f);
+    m_Image->m_Position = glm::vec2(Map::m_ScreenLeft + m_Margin + w / 2.0f, Map::m_ScreenTop - 100.0f - h / 2.0f);
 }
 
 void KorokDialog::SetPosition(glm::vec2 position)
@@ -116,4 +118,21 @@ KorokDialog::~KorokDialog()
 {
     delete m_Image;
     m_Image = nullptr;
+}
+
+bool KorokDialog::IsPositionOn(const glm::vec2& position) const
+{
+    return position.x >= Map::m_ScreenLeft && position.x <= Map::m_ScreenLeft + Width &&
+           position.y >= Map::m_ScreenBottom && position.y <= Map::m_ScreenTop;
+}
+
+bool KorokDialog::IsImagePositionOn(const glm::vec2& position) const
+{
+    if (!m_Image || !m_Image->m_Texture)
+        return false;
+
+    const float halfWidth = m_Image->m_Texture->m_Width * m_Image->m_Scale / 2.0f;
+    const float halfHeight = m_Image->m_Texture->m_Height * m_Image->m_Scale / 2.0f;
+    return position.x >= m_Image->m_Position.x - halfWidth && position.x <= m_Image->m_Position.x + halfWidth &&
+           position.y >= m_Image->m_Position.y - halfHeight && position.y <= m_Image->m_Position.y + halfHeight;
 }

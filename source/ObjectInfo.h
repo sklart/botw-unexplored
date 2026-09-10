@@ -13,6 +13,8 @@ public:
                    const std::string& name, bool* found);
     void SetOpen(bool open);
     void Render(glm::mat4 projection = glm::mat4(1.0f));
+    bool IsPositionOn(const glm::vec2& position) const;
+    glm::vec2 GetMapPosition() const;
     ~ObjectInfo();
 
     bool m_IsOpen = false;

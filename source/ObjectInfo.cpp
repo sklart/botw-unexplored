@@ -86,6 +86,17 @@ void ObjectInfo::Render(glm::mat4 projection)
     Map::m_Font.AddTextToBatch(Localization::Get(Localization::Text::Close), glm::vec2(Map::m_ScreenLeft + 370.0f, Map::m_ScreenBottom + 45.0f), 0.35f, glm::vec3(1.0f), ALIGN_RIGHT);
 }
 
+bool ObjectInfo::IsPositionOn(const glm::vec2& position) const
+{
+    return position.x >= Map::m_ScreenLeft && position.x <= Map::m_ScreenLeft + 390.0f &&
+           position.y >= Map::m_ScreenBottom && position.y <= Map::m_ScreenTop;
+}
+
+glm::vec2 ObjectInfo::GetMapPosition() const
+{
+    return m_MapPosition;
+}
+
 ObjectInfo::~ObjectInfo()
 {
     delete m_Icon;
