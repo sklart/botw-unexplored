@@ -42,16 +42,16 @@ public:
     Mesh<TextureVertex> m_CharMesh;
 
     std::map<uint32_t, Character> m_Characters;
-    glm::mat4* m_ProjectionMatrix;
-    glm::mat4* m_ViewMatrix;
+    glm::mat4* m_ProjectionMatrix = nullptr;
+    glm::mat4* m_ViewMatrix = nullptr;
 
     bool m_Initialized = false;
 
     std::map<uint32_t, std::vector<Text>> m_CharsToRender;
 
 private:
-    unsigned int m_Vao;
-    unsigned int m_Vbo;
+    unsigned int m_Vao = 0;
+    unsigned int m_Vbo = 0;
     FT_Library m_FreeType = nullptr;
     FT_Face m_Face = nullptr;
 

@@ -19,12 +19,12 @@ KorokDialog::KorokDialog()
     m_Background.m_Color = glm::vec4(0.0f, 0.0f, 0.0f, 0.75f);
 }
 
-void KorokDialog::Render(glm::mat4 projMat, glm::mat4 viewMat)
+void KorokDialog::Render()
 {
     if (!m_IsOpen)
         return;
 
-    m_Background.m_ProjectionMatrix = &projMat;
+    m_Background.m_ProjectionMatrix = &Map::m_ProjectionMatrix;
     m_Background.m_ViewMatrix = nullptr;
 
     m_Background.Render();
@@ -32,7 +32,7 @@ void KorokDialog::Render(glm::mat4 projMat, glm::mat4 viewMat)
     // Image
     if (m_Image && m_Image->m_Texture != nullptr)
     {
-        m_Image->m_ProjectionMatrix = &projMat;
+        m_Image->m_ProjectionMatrix = &Map::m_ProjectionMatrix;
         m_Image->m_ViewMatrix = nullptr;
         m_Image->Render();
     }

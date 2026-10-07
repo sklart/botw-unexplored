@@ -21,7 +21,7 @@ public:
     static Shader m_Shader;
     static Mesh<TextureVertex> m_Mesh;
 
-    T* m_ObjectData;
+    T* m_ObjectData = nullptr;
 
     glm::vec2 m_Position = glm::vec2(0.0f, 0.0f);
     bool m_Found = false;

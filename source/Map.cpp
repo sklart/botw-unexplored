@@ -621,8 +621,8 @@ void Map::Render()
             glm::vec2(bottomTextX, m_ScreenBottom + 20), 0.42f, glm::vec3(1.0f), ALIGN_RIGHT);
     }
 
-    m_KorokDialog->Render(m_ProjectionMatrix, m_ViewMatrix);
-    m_ObjectInfo->Render(m_ProjectionMatrix);
+    m_KorokDialog->Render();
+    m_ObjectInfo->Render();
 
     glm::mat4 emptyViewMatrix(1.0);
     m_Font.m_ViewMatrix = &emptyViewMatrix; // Don't draw the text relative to the camera

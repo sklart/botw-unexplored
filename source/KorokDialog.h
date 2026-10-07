@@ -7,7 +7,7 @@ class KorokDialog
 public:
     KorokDialog();
 
-    void Render(glm::mat4 projMat = glm::mat4(1.0f), glm::mat4 viewMat = glm::mat4(1.0f));
+    void Render();
     
     void SetSeed(int seed, int korokIndex);
     void SetOpen(bool open);

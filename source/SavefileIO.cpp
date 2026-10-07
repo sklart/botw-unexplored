@@ -153,7 +153,7 @@ SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker, 
     }
 
     Result rc = 0;
-    u64 botwId = 0x01007ef00011e000;
+    const u64 botwId = 0x01007ef00011e000ULL;
     AccountUid uid = {candidate.accountUid1, candidate.accountUid2};
 
     if (!openProfilePicker)
@@ -228,7 +228,7 @@ SaveLoadDecision::MountStatus SavefileIO::MountSavefile(bool openProfilePicker, 
                 {
                     couldGetUserAutomatically = false;
                     Log("No user used to launch the app");
-                } else if (R_SUCCEEDED(rc) && accountUidIsValid(&uid))
+                } else if (accountUidIsValid(&uid))
                 {
                     couldGetUserAutomatically = true;
                     Log("Got user used to launch the app");

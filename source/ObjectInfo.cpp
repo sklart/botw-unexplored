@@ -45,18 +45,18 @@ void ObjectInfo::SetOpen(bool open)
         Map::m_Legend->m_IsOpen = false;
 }
 
-void ObjectInfo::Render(glm::mat4 projection)
+void ObjectInfo::Render()
 {
     if (!m_IsOpen)
         return;
 
-    m_Background.m_ProjectionMatrix = &projection;
+    m_Background.m_ProjectionMatrix = &Map::m_ProjectionMatrix;
     m_Background.m_ViewMatrix = nullptr;
     m_Background.Render();
 
     if (m_Icon && m_Icon->m_Texture)
     {
-        m_Icon->m_ProjectionMatrix = &projection;
+        m_Icon->m_ProjectionMatrix = &Map::m_ProjectionMatrix;
         m_Icon->m_ViewMatrix = nullptr;
         m_Icon->m_Position = glm::vec2(Map::m_ScreenLeft + 340.0f, Map::m_ScreenTop - 100.0f);
         m_Icon->Render();

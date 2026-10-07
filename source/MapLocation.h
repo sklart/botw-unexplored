@@ -21,7 +21,7 @@ namespace Data
 class MapLocation
 {
 public:
-    Data::Location* m_LocationData;
+    Data::Location* m_LocationData = nullptr;
 
     glm::vec2 m_Position;
     glm::vec3 m_Color = glm::vec3(1.0f, 1.0f, 1.0f);

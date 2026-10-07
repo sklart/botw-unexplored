@@ -141,7 +141,7 @@ void Dialog::Update()
 
                     if (m_Type != DialogType::MasterModeChoose)
                         Map::m_ShouldExit = true;
-                    else if (m_Type == DialogType::MasterModeChoose)
+                    else
                     {
                         m_IsOpen = false;
                         Map::m_Legend->m_IsOpen = true;
@@ -199,7 +199,7 @@ void Dialog::Update()
         {
             if (m_Type != DialogType::MasterModeChoose)
                 Map::m_ShouldExit = true;
-            else if (m_Type == DialogType::MasterModeChoose)
+            else
             {
                 m_IsOpen = false;
                 Map::m_Legend->m_IsOpen = true;
